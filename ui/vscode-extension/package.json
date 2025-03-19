@@ -1,0 +1,58 @@
+{
+  "name": "goose-vscode",
+  "displayName": "Goose Wingman",
+  "description": "Wingman – Goose-Powered VSCode extension",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "goose-wingman.helloWorld",
+        "title": "Hello World"
+      },
+      {
+        "command": "goose-wingman.start",
+        "title": "Start Goose Wingman"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && npm run build-webview",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "build-webview": "cd webview-ui && npm run build",
+    "dev-webview": "cd webview-ui && npm run dev"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^9.21.0",
+    "postcss": "^8.4.32",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "typescript": "^5.8.2"
+  }
+}
