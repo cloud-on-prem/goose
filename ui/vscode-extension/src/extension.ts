@@ -4,6 +4,20 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+// Message types for communication between extension and webview
+enum MessageType {
+	HELLO = 'hello',
+	GET_ACTIVE_EDITOR_CONTENT = 'getActiveEditorContent',
+	ACTIVE_EDITOR_CONTENT = 'activeEditorContent',
+	ERROR = 'error'
+}
+
+// Interface for messages sent between extension and webview
+interface Message {
+	command: string;
+	[key: string]: any; // Additional properties
+}
+
 /**
  * Manages webview panels
  */
@@ -57,16 +71,53 @@ class WebviewPanel {
 
 		// Handle messages from the webview
 		this._panel.webview.onDidReceiveMessage(
-			message => {
-				switch (message.command) {
-					case 'hello':
-						vscode.window.showInformationMessage(message.text);
-						break;
-				}
+			(message: Message) => {
+				this._handleMessage(message);
 			},
 			null,
 			this._disposables
 		);
+	}
+
+	private _handleMessage(message: Message) {
+		switch (message.command) {
+			case MessageType.HELLO:
+				vscode.window.showInformationMessage(message.text);
+				break;
+
+			case MessageType.GET_ACTIVE_EDITOR_CONTENT:
+				this._sendActiveEditorContent();
+				break;
+
+			default:
+				console.log(`Unhandled message command: ${message.command}`);
+		}
+	}
+
+	private _sendActiveEditorContent() {
+		const editor = vscode.window.activeTextEditor;
+		if (editor) {
+			const document = editor.document;
+			const content = document.getText();
+			const fileName = document.fileName;
+			const languageId = document.languageId;
+
+			this._sendMessageToWebview({
+				command: MessageType.ACTIVE_EDITOR_CONTENT,
+				content,
+				fileName,
+				languageId,
+			});
+		} else {
+			this._sendMessageToWebview({
+				command: MessageType.ERROR,
+				errorMessage: 'No active editor found'
+			});
+		}
+	}
+
+	private _sendMessageToWebview(message: Message) {
+		this._panel.webview.postMessage(message);
 	}
 
 	private _update() {
