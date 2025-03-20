@@ -281,20 +281,25 @@
 
 /* Reduce extra spacing in markdown */
 .message-text>p:first-child {
-    margin-top: 0;
+    margin-top: 0 !important;
 }
 
 .message-text>p:last-child {
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
+}
+
+/* Remove extra spacing between adjacent elements */
+.message-text>*:not(:first-child) {
+    margin-top: 6px !important;
 }
 
 /* Code block styling */
 .message-text pre {
     background-color: var(--vscode-textCodeBlock-background);
-    padding: 10px 14px;
+    padding: 8px 12px !important;
     border-radius: 4px;
     overflow-x: auto;
-    margin: 10px 0;
+    margin: 6px 0 !important;
     border: 1px solid var(--vscode-widget-border);
     position: relative;
 }
@@ -355,8 +360,8 @@
 
 /* Additional markdown element styling */
 .message-text p {
-    margin: 8px 0;
-    line-height: 1.6;
+    margin: 4px 0 !important;
+    line-height: 1.5;
 }
 
 .message-text h1,
@@ -365,26 +370,25 @@
 .message-text h4,
 .message-text h5,
 .message-text h6 {
-    margin-top: 16px;
-    margin-bottom: 8px;
+    margin: 8px 0 4px 0 !important;
     color: var(--vscode-foreground);
     font-weight: 600;
 }
 
 .message-text ul,
 .message-text ol {
-    margin: 10px 0;
-    padding-left: 24px;
+    margin: 4px 0 !important;
+    padding-left: 20px !important;
 }
 
 .message-text li {
-    margin: 4px 0;
+    margin: 2px 0 !important;
 }
 
 .message-text blockquote {
     border-left: 3px solid var(--vscode-textBlockQuote-border);
-    margin: 10px 0;
-    padding: 8px 16px;
+    margin: 6px 0 !important;
+    padding: 4px 12px !important;
     background-color: var(--vscode-textBlockQuote-background);
     color: var(--vscode-textBlockQuote-foreground);
 }

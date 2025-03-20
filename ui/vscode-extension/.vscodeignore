@@ -5,7 +5,44 @@ src/**
 .yarnrc
 vsc-extension-quickstart.md
 **/tsconfig.json
+**/tsconfig.node.json
 **/eslint.config.mjs
 **/*.map
 **/*.ts
-**/.vscode-test.* 
+**/.vscode-test.*
+
+# Webview UI source files (only dist is needed)
+webview-ui/src/**
+webview-ui/node_modules/**
+webview-ui/public/**
+webview-ui/package-lock.json
+webview-ui/postcss.config.js
+webview-ui/tailwind.config.js
+webview-ui/vite.config.*
+
+# Development files
+.eslintrc.json
+.eslintignore
+.prettierrc
+.prettierignore
+.editorconfig
+.github/**
+.husky/**
+**/.DS_Store
+**/.git/**
+**/.idea/**
+**/*.log
+
+# Test related files
+**/test/**
+**/tests/**
+**/__tests__/**
+**/__mocks__/**
+**/coverage/**
+
+# All node_modules except for production dependencies
+node_modules/**
+!node_modules/typescript/**
+
+# Generated files during development
+**/*.vsix 

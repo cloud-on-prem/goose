@@ -4,6 +4,7 @@ import './vscodeStyles.css'; // Import VS Code theme variables
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
 
 // VS Code API is available as a global when running in a webview
 declare global {
@@ -207,6 +208,7 @@ const App: React.FC = () => {
             .map((item, index) => (
                 <div key={index} className="whitespace-pre-wrap message-text">
                     <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                             // Custom code block rendering with syntax highlighting
                             code({ node, inline, className, children, ...props }) {
@@ -224,7 +226,7 @@ const App: React.FC = () => {
                                                 border: '1px solid var(--vscode-widget-border)',
                                                 borderRadius: '4px',
                                                 padding: '10px 14px',
-                                                margin: '10px 0'
+                                                margin: '6px 0'
                                             }}
                                             {...props}
                                         >
@@ -244,17 +246,55 @@ const App: React.FC = () => {
                                     </code>
                                 );
                             },
-                            // Remove excessive paragraph spacing
+                            // Fix paragraph spacing
                             p({ node, children, ...props }) {
                                 return (
-                                    <p style={{ margin: '8px 0', lineHeight: '1.6' }} {...props}>
+                                    <p style={{ margin: '4px 0', lineHeight: '1.5' }} {...props}>
                                         {children}
                                     </p>
+                                );
+                            },
+                            // Fix heading spacing
+                            h1({ node, children, ...props }) {
+                                return <h1 style={{ margin: '8px 0 4px 0' }} {...props}>{children}</h1>;
+                            },
+                            h2({ node, children, ...props }) {
+                                return <h2 style={{ margin: '8px 0 4px 0' }} {...props}>{children}</h2>;
+                            },
+                            h3({ node, children, ...props }) {
+                                return <h3 style={{ margin: '8px 0 4px 0' }} {...props}>{children}</h3>;
+                            },
+                            // Reduce list spacing
+                            ul({ node, children, ...props }) {
+                                return <ul style={{ margin: '4px 0', paddingLeft: '20px' }} {...props}>{children}</ul>;
+                            },
+                            ol({ node, children, ...props }) {
+                                return <ol style={{ margin: '4px 0', paddingLeft: '20px' }} {...props}>{children}</ol>;
+                            },
+                            // Reduce list item spacing
+                            li({ node, children, ...props }) {
+                                return <li style={{ margin: '2px 0' }} {...props}>{children}</li>;
+                            },
+                            // Fix blockquote spacing
+                            blockquote({ node, children, ...props }) {
+                                return (
+                                    <blockquote
+                                        style={{
+                                            borderLeft: '3px solid var(--vscode-textBlockQuote-border)',
+                                            margin: '6px 0',
+                                            padding: '4px 12px',
+                                            backgroundColor: 'var(--vscode-textBlockQuote-background)',
+                                            color: 'var(--vscode-textBlockQuote-foreground)'
+                                        }}
+                                        {...props}
+                                    >
+                                        {children}
+                                    </blockquote>
                                 );
                             }
                         }}
                     >
-                        {item.text}
+                        {item.text.trim()}
                     </ReactMarkdown>
                 </div>
             ));

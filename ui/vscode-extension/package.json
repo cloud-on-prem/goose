@@ -3,6 +3,11 @@
   "displayName": "Goose Wingman",
   "description": "Wingman – Goose-Powered VSCode extension",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goose-ai/goose"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.98.0"
   },
@@ -51,13 +56,17 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "package": "npm run clean && npm run test && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "package:skip-tests": "npm run clean && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "package:inspect": "npx @vscode/vsce ls --no-yarn",
     "compile": "tsc -p ./ && npm run build-webview",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
     "build-webview": "cd webview-ui && npm run build",
-    "dev-webview": "cd webview-ui && npm run dev"
+    "dev-webview": "cd webview-ui && npm run dev",
+    "clean": "rimraf out && rimraf webview-ui/dist && rimraf *.vsix"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -76,6 +85,7 @@
     "postcss": "^8.4.32",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "rimraf": "^6.0.1",
     "sinon": "^19.0.4",
     "tailwindcss": "^3.3.6",
     "vite": "^5.0.10"
