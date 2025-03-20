@@ -31,7 +31,7 @@ The extension requires the Goose backend server to function properly:
 
 This extension contributes the following settings:
 
-* `goose-wingman.enable`: enable/disable this extension
+* `goose.enable`: enable/disable this extension
 
 ## Known Issues
 
@@ -214,8 +214,8 @@ The extension communicates with the Goose server using the following API endpoin
 
 The extension provides the following commands:
 
-- `Goose Wingman: Hello World` - Displays a simple greeting message
-- `Goose Wingman: Start` - Opens the Goose Wingman chat interface
+- `Goose: Hello World` - Displays a simple greeting message
+- `Goose: Start` - Opens the Goose chat interface
 - `Goose: Start Server` - Manually starts the Goose server
 - `Goose: Stop Server` - Manually stops the Goose server
 

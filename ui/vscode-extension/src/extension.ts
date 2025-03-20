@@ -30,8 +30,8 @@ interface WebviewMessage {
 /**
  * Manages webview panels and sidebar view
  */
-class GooseWingmanViewProvider implements vscode.WebviewViewProvider {
-	public static readonly viewType = 'goose-wingman.chatView';
+class GooseViewProvider implements vscode.WebviewViewProvider {
+	public static readonly viewType = 'goose.chatView';
 	private _view?: vscode.WebviewView;
 	private readonly _extensionUri: vscode.Uri;
 	private readonly _serverManager: ServerManager;
@@ -219,10 +219,10 @@ export function activate(context: vscode.ExtensionContext) {
 		console.error('Error starting Goose server:', error);
 	});
 
-	// Register the Goose Wingman View Provider
-	const provider = new GooseWingmanViewProvider(context.extensionUri, serverManager, chatProcessor);
+	// Register the Goose View Provider
+	const provider = new GooseViewProvider(context.extensionUri, serverManager, chatProcessor);
 	const viewRegistration = vscode.window.registerWebviewViewProvider(
-		GooseWingmanViewProvider.viewType,
+		GooseViewProvider.viewType,
 		provider,
 		{
 			webviewOptions: { retainContextWhenHidden: true }
@@ -230,19 +230,19 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	// The command has been defined in the package.json file
-	const helloDisposable = vscode.commands.registerCommand('goose-wingman.helloWorld', () => {
+	const helloDisposable = vscode.commands.registerCommand('goose.helloWorld', () => {
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Goose Wingman!');
+		vscode.window.showInformationMessage('Hello World from Goose!');
 	});
 
-	// Command to focus the Wingman view
-	const startDisposable = vscode.commands.registerCommand('goose-wingman.start', () => {
-		vscode.commands.executeCommand('goose-wingman.chatView.focus');
+	// Command to focus the Goose view
+	const startDisposable = vscode.commands.registerCommand('goose.start', () => {
+		vscode.commands.executeCommand('goose.chatView.focus');
 	});
 
 	// Command to manually start the server
-	const startServerDisposable = vscode.commands.registerCommand('goose-wingman.startServer', async () => {
+	const startServerDisposable = vscode.commands.registerCommand('goose.startServer', async () => {
 		try {
 			vscode.window.showInformationMessage('Starting Goose server...');
 			await serverManager.start();
@@ -253,7 +253,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	// Command to manually stop the server
-	const stopServerDisposable = vscode.commands.registerCommand('goose-wingman.stopServer', () => {
+	const stopServerDisposable = vscode.commands.registerCommand('goose.stopServer', () => {
 		try {
 			serverManager.stop();
 			vscode.window.showInformationMessage('Goose server stopped');

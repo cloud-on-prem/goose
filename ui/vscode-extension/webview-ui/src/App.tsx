@@ -314,7 +314,7 @@ const App: React.FC = () => {
             {/* Header */}
             <header className="vscode-chat-header">
                 <div className="vscode-chat-header-content">
-                    <h1 className="vscode-chat-title">Goose Wingman</h1>
+                    <h1 className="vscode-chat-title">Goose</h1>
                     <div className="vscode-status-container">
                         <span className={`vscode-status-badge ${serverStatus}`}>
                             {serverStatus.toUpperCase()}

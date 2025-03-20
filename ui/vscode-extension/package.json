@@ -1,7 +1,7 @@
 {
   "name": "goose-vscode",
-  "displayName": "Codename: Goose",
-  "description": "Wingman for Codename: Goose",
+  "displayName": "Goose",
+  "description": "Goose AI for VSCode",
   "version": "0.0.1",
   "repository": {
     "type": "git",
@@ -20,36 +20,36 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "goose-wingman",
+          "id": "goose",
           "title": "Goose",
           "icon": "resources/goose-icon.svg"
         }
       ]
     },
     "views": {
-      "goose-wingman": [
+      "goose": [
         {
           "type": "webview",
-          "id": "goose-wingman.chatView",
+          "id": "goose.chatView",
           "name": "Chat"
         }
       ]
     },
     "commands": [
       {
-        "command": "goose-wingman.helloWorld",
+        "command": "goose.helloWorld",
         "title": "Hello World"
       },
       {
-        "command": "goose-wingman.start",
-        "title": "Start Goose Wingman"
+        "command": "goose.start",
+        "title": "Start Goose"
       },
       {
-        "command": "goose-wingman.startServer",
+        "command": "goose.startServer",
         "title": "Goose: Start Server"
       },
       {
-        "command": "goose-wingman.stopServer",
+        "command": "goose.stopServer",
         "title": "Goose: Stop Server"
       }
     ]

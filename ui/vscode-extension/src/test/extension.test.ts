@@ -34,11 +34,11 @@ suite('Extension Test Suite', () => {
 
 		// Verify that registerCommand was called with our expected commands
 		assert.ok(
-			registerCommandStub.calledWith('goose-wingman.helloWorld'),
+			registerCommandStub.calledWith('goose.helloWorld'),
 			'Hello World command not registered'
 		);
 		assert.ok(
-			registerCommandStub.calledWith('goose-wingman.start'),
+			registerCommandStub.calledWith('goose.start'),
 			'Start command not registered'
 		);
 
