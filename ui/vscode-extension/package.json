@@ -1,11 +1,11 @@
 {
   "name": "goose-vscode",
-  "displayName": "Goose Wingman",
-  "description": "Wingman – Goose-Powered VSCode extension",
+  "displayName": "Codename: Goose",
+  "description": "Wingman for Codename: Goose",
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/goose-ai/goose"
+    "url": "https://github.com/block/goose"
   },
   "license": "MIT",
   "engines": {
@@ -21,7 +21,7 @@
       "activitybar": [
         {
           "id": "goose-wingman",
-          "title": "Goose Wingman",
+          "title": "Goose",
           "icon": "resources/goose-icon.svg"
         }
       ]

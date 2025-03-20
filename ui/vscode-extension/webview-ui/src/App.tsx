@@ -54,6 +54,7 @@ const App: React.FC = () => {
     const [serverStatus, setServerStatus] = useState<string>('stopped');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
+    const [showDebug, setShowDebug] = useState<boolean>(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom whenever messages change
@@ -206,7 +207,7 @@ const App: React.FC = () => {
         return content
             .filter(item => item && item.type === 'text' && item.text && item.text.trim() !== '')
             .map((item, index) => (
-                <div key={index} className="whitespace-pre-wrap message-text">
+                <div key={index} className="message-text">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -219,15 +220,8 @@ const App: React.FC = () => {
                                     return (
                                         <SyntaxHighlighter
                                             style={vscDarkPlus}
-                                            language={lang || 'typescript'}
+                                            language={lang || 'text'}
                                             PreTag="div"
-                                            customStyle={{
-                                                backgroundColor: 'var(--vscode-textCodeBlock-background)',
-                                                border: '1px solid var(--vscode-widget-border)',
-                                                borderRadius: '4px',
-                                                padding: '10px 14px',
-                                                margin: '6px 0'
-                                            }}
                                             {...props}
                                         >
                                             {String(children).replace(/\n$/, '')}
@@ -236,60 +230,9 @@ const App: React.FC = () => {
                                 }
 
                                 return (
-                                    <code className={className} {...props} style={{
-                                        backgroundColor: 'var(--vscode-textCodeBlock-background)',
-                                        padding: '2px 4px',
-                                        borderRadius: '3px',
-                                        color: 'var(--vscode-editor-foreground)'
-                                    }}>
+                                    <code className={className} {...props}>
                                         {children}
                                     </code>
-                                );
-                            },
-                            // Fix paragraph spacing
-                            p({ node, children, ...props }) {
-                                return (
-                                    <p style={{ margin: '4px 0', lineHeight: '1.5' }} {...props}>
-                                        {children}
-                                    </p>
-                                );
-                            },
-                            // Fix heading spacing
-                            h1({ node, children, ...props }) {
-                                return <h1 style={{ margin: '8px 0 4px 0' }} {...props}>{children}</h1>;
-                            },
-                            h2({ node, children, ...props }) {
-                                return <h2 style={{ margin: '8px 0 4px 0' }} {...props}>{children}</h2>;
-                            },
-                            h3({ node, children, ...props }) {
-                                return <h3 style={{ margin: '8px 0 4px 0' }} {...props}>{children}</h3>;
-                            },
-                            // Reduce list spacing
-                            ul({ node, children, ...props }) {
-                                return <ul style={{ margin: '4px 0', paddingLeft: '20px' }} {...props}>{children}</ul>;
-                            },
-                            ol({ node, children, ...props }) {
-                                return <ol style={{ margin: '4px 0', paddingLeft: '20px' }} {...props}>{children}</ol>;
-                            },
-                            // Reduce list item spacing
-                            li({ node, children, ...props }) {
-                                return <li style={{ margin: '2px 0' }} {...props}>{children}</li>;
-                            },
-                            // Fix blockquote spacing
-                            blockquote({ node, children, ...props }) {
-                                return (
-                                    <blockquote
-                                        style={{
-                                            borderLeft: '3px solid var(--vscode-textBlockQuote-border)',
-                                            margin: '6px 0',
-                                            padding: '4px 12px',
-                                            backgroundColor: 'var(--vscode-textBlockQuote-background)',
-                                            color: 'var(--vscode-textBlockQuote-foreground)'
-                                        }}
-                                        {...props}
-                                    >
-                                        {children}
-                                    </blockquote>
                                 );
                             }
                         }}
@@ -303,7 +246,7 @@ const App: React.FC = () => {
     // Add a separate component for the generating indicator
     const GeneratingIndicator = ({ onStop }: { onStop: () => void }) => (
         <div className="vscode-generating">
-            <div className="vscode-generating-text">Generating</div>
+            <div className="vscode-generating-text">Generating response</div>
             <div className="vscode-loading-dot">.</div>
             <div className="vscode-loading-dot">.</div>
             <div className="vscode-loading-dot">.</div>
@@ -326,9 +269,49 @@ const App: React.FC = () => {
                         <span className={`vscode-status-badge ${serverStatus}`}>
                             {serverStatus.toUpperCase()}
                         </span>
+                        <button
+                            onClick={() => setShowDebug(!showDebug)}
+                            className="vscode-debug-button"
+                            title="Toggle debug mode"
+                        >
+                            🐛
+                        </button>
                     </div>
                 </div>
             </header>
+
+            {/* Debug Panel */}
+            {showDebug && (
+                <div className="vscode-debug-panel">
+                    <h3>Debug Information</h3>
+                    <p>Messages Count: {messages.length}</p>
+                    <p>Is Loading: {isLoading ? 'Yes' : 'No'}</p>
+                    <p>Server Status: {serverStatus}</p>
+                    <details>
+                        <summary>CSS Debugging Tips</summary>
+                        <ol>
+                            <li>Check rendered HTML in Developer Tools (F12)</li>
+                            <li>Inspect message-text elements and their margins</li>
+                            <li>Look for conflicting CSS rules in paragraph and pre elements</li>
+                        </ol>
+                    </details>
+                    <button onClick={() => {
+                        // Add a test message to see styling
+                        const testMessage: Message = {
+                            id: `test-${Date.now()}`,
+                            role: 'assistant',
+                            created: Date.now(),
+                            content: [{
+                                type: 'text',
+                                text: "This is a test message with multiple lines\n\nHere are some things I can help with:\n\n- Code development and editing\n- Running shell commands\n- Exploring project structures\n- Debugging issues\n\nHere's some code:\n\n```python\ndef test():\n    print('hello')\n```\n\nAnd some more text\n\nAnd another code block:\n\n```javascript\nfunction test() {\n  console.log('Hello');\n}\n```\n\nAnd final text paragraph here."
+                            }]
+                        };
+                        setMessages(prev => [...prev, testMessage]);
+                    }}>
+                        Add Test Message
+                    </button>
+                </div>
+            )}
 
             {/* Error Message */}
             {errorMessage && (
@@ -344,28 +327,35 @@ const App: React.FC = () => {
                         <p>No messages yet. Start a conversation!</p>
                     </div>
                 ) : (
-                    messages.map((message, index) => {
-                        const messageContent = renderMessageContent(message.content);
-                        // Only render the message if it has valid content
-                        if (!messageContent) return null;
+                    <>
+                        {messages.map((message, index) => {
+                            const messageContent = renderMessageContent(message.content);
+                            // Only render the message if it has valid content
+                            if (!messageContent) return null;
 
-                        const isLastUserMessage = message.role === 'user' &&
-                            index === messages.findIndex(m => m.id === currentMessageId);
+                            // Check if this is the last user message
+                            const isLastUserMessage = message.role === 'user' &&
+                                index === messages.length - 1;
 
-                        return (
-                            <div key={message.id || index} className="vscode-message-container">
-                                <div className={`vscode-message-header ${message.role}`}>
-                                    {message.role === 'user' ? 'You' : 'Goose'}
-                                </div>
-                                <div className={`vscode-message-content ${message.role}`}>
-                                    {messageContent}
+                            return (
+                                <React.Fragment key={message.id || index}>
+                                    <div className="vscode-message-container">
+                                        <div className={`vscode-message-header ${message.role}`}>
+                                            {message.role === 'user' ? 'You' : 'Goose'}
+                                        </div>
+                                        <div className={`vscode-message-content ${message.role}`}>
+                                            {messageContent}
+                                        </div>
+                                    </div>
                                     {isLoading && isLastUserMessage && (
-                                        <GeneratingIndicator onStop={stopGeneration} />
+                                        <div className="vscode-generating-container">
+                                            <GeneratingIndicator onStop={stopGeneration} />
+                                        </div>
                                     )}
-                                </div>
-                            </div>
-                        );
-                    })
+                                </React.Fragment>
+                            );
+                        })}
+                    </>
                 )}
                 <div ref={messagesEndRef} />
             </div>

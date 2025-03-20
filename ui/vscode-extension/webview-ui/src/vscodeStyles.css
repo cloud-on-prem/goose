@@ -150,15 +150,23 @@
 }
 
 /* Styles for the "Generating" indicator */
+.vscode-generating-container {
+    margin: 8px 0 12px 0;
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+}
+
 .vscode-generating {
     display: flex;
     align-items: center;
-    margin-top: 10px;
-    padding: 8px 10px;
+    padding: 10px 14px;
     background-color: var(--vscode-editorWidget-background);
-    border-radius: 4px;
+    border-radius: 6px;
     border-left: 3px solid var(--vscode-progressBar-background);
     animation: pulse 2s infinite;
+    max-width: 80%;
+    box-shadow: 0 1px 3px var(--vscode-widget-shadow);
 }
 
 @keyframes pulse {
@@ -176,7 +184,7 @@
 }
 
 .vscode-generating-text {
-    margin-right: 4px;
+    margin-right: 6px;
     font-weight: 500;
     color: var(--vscode-foreground);
 }
@@ -185,6 +193,8 @@
     animation: bounce 1s infinite;
     color: var(--vscode-progressBar-background);
     font-weight: bold;
+    font-size: 16px;
+    margin-left: 1px;
 }
 
 .vscode-loading-dot:nth-child(2) {
@@ -203,7 +213,7 @@
     }
 
     50% {
-        transform: translateY(-5px);
+        transform: translateY(-6px);
     }
 }
 
@@ -277,75 +287,89 @@
     margin: 0;
     padding: 0;
     width: 100%;
+    font-size: var(--vscode-font-size);
+    line-height: 1.5 !important;
 }
 
-/* Reduce extra spacing in markdown */
-.message-text>p:first-child {
-    margin-top: 0 !important;
+/* Make sure spacing elements work correctly */
+.message-text>* {
+    margin-bottom: 8px;
 }
 
-.message-text>p:last-child {
-    margin-bottom: 0 !important;
+.message-text>*:last-child {
+    margin-bottom: 0;
 }
 
-/* Remove extra spacing between adjacent elements */
-.message-text>*:not(:first-child) {
-    margin-top: 6px !important;
+/* Headings */
+.message-text h1,
+.message-text h2,
+.message-text h3,
+.message-text h4,
+.message-text h5,
+.message-text h6 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-weight: 600;
+    line-height: 1.5 !important;
 }
 
-/* Code block styling */
+.message-text h1 {
+    font-size: 2em;
+}
+
+.message-text h2 {
+    font-size: 1.5em;
+}
+
+.message-text h3 {
+    font-size: 1.25em;
+}
+
+/* Lists */
+.message-text ul,
+.message-text ol {
+    padding-left: 2em;
+    margin-top: 0;
+    margin-bottom: 8px;
+    list-style-position: outside;
+}
+
+.message-text ol {
+    list-style-type: decimal;
+}
+
+.message-text ul {
+    list-style-type: disc;
+}
+
+.message-text li {
+    margin-top: 0.25em;
+    padding-left: 0.25em;
+    display: list-item;
+    line-height: 1.5 !important;
+}
+
+.message-text li+li {
+    margin-top: 0.25em;
+}
+
+/* Paragraphs */
+.message-text p {
+    margin-top: 0;
+    margin-bottom: 8px;
+    line-height: 1.5 !important;
+}
+
+/* Code blocks */
 .message-text pre {
     background-color: var(--vscode-textCodeBlock-background);
-    padding: 8px 12px !important;
-    border-radius: 4px;
-    overflow-x: auto;
-    margin: 6px 0 !important;
     border: 1px solid var(--vscode-widget-border);
-    position: relative;
-}
-
-.message-text pre code {
-    font-family: var(--vscode-editor-font-family);
-    font-size: var(--vscode-editor-font-size);
-    color: var(--vscode-editor-foreground);
-    display: block;
-    padding: 0;
-    background-color: transparent;
-    border-radius: 0;
-}
-
-/* Syntax highlighting classes using VSCode theme variables */
-.message-text code .keyword {
-    color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-editor-foreground));
-}
-
-.message-text code .function {
-    color: var(--vscode-symbolIcon-functionForeground, var(--vscode-editor-foreground));
-}
-
-.message-text code .string {
-    color: var(--vscode-symbolIcon-stringForeground, var(--vscode-editor-foreground));
-}
-
-.message-text code .number {
-    color: var(--vscode-symbolIcon-numberForeground, var(--vscode-editor-foreground));
-}
-
-.message-text code .comment {
-    color: var(--vscode-symbolIcon-snippetForeground, var(--vscode-editorLineNumber-foreground));
-    font-style: italic;
-}
-
-.message-text code .operator {
-    color: var(--vscode-symbolIcon-operatorForeground, var(--vscode-editor-foreground));
-}
-
-.message-text code .variable {
-    color: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
-}
-
-.message-text code .property {
-    color: var(--vscode-symbolIcon-propertyForeground, var(--vscode-editor-foreground));
+    border-radius: 4px;
+    margin-top: 0;
+    margin-bottom: 8px;
+    padding: 8px;
+    overflow: auto;
+    line-height: 1.5 !important;
 }
 
 /* Inline code */
@@ -353,58 +377,80 @@
     font-family: var(--vscode-editor-font-family);
     font-size: var(--vscode-editor-font-size);
     background-color: var(--vscode-textCodeBlock-background);
-    padding: 2px 4px;
     border-radius: 3px;
-    color: var(--vscode-editor-foreground);
+    padding: 0.2em 0.4em;
+    line-height: 1.5 !important;
 }
 
-/* Additional markdown element styling */
-.message-text p {
-    margin: 4px 0 !important;
-    line-height: 1.5;
-}
-
-.message-text h1,
-.message-text h2,
-.message-text h3,
-.message-text h4,
-.message-text h5,
-.message-text h6 {
-    margin: 8px 0 4px 0 !important;
-    color: var(--vscode-foreground);
-    font-weight: 600;
-}
-
-.message-text ul,
-.message-text ol {
-    margin: 4px 0 !important;
-    padding-left: 20px !important;
-}
-
-.message-text li {
-    margin: 2px 0 !important;
-}
-
+/* Blockquotes */
 .message-text blockquote {
     border-left: 3px solid var(--vscode-textBlockQuote-border);
-    margin: 6px 0 !important;
-    padding: 4px 12px !important;
     background-color: var(--vscode-textBlockQuote-background);
     color: var(--vscode-textBlockQuote-foreground);
+    padding: 0 1em;
+    margin: 0 0 8px;
+    line-height: 1.5 !important;
 }
 
+/* Links */
 .message-text a {
-    color: var(--vscode-textLink-foreground);
+    color: var(--vscode-textLink-activeForeground);
     text-decoration: none;
-    transition: color 0.2s ease;
 }
 
 .message-text a:hover {
-    color: var(--vscode-textLink-activeForeground);
     text-decoration: underline;
 }
 
-/* Utils */
-.whitespace-pre-wrap {
-    white-space: pre-wrap;
+/* Debug tools */
+.vscode-debug-button {
+    background: none;
+    border: none;
+    margin-left: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.vscode-debug-button:hover {
+    opacity: 1;
+}
+
+.vscode-debug-panel {
+    background-color: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-panel-border);
+    margin: 10px;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.vscode-debug-panel h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: var(--vscode-foreground);
+}
+
+.vscode-debug-panel p {
+    margin: 4px 0;
+    font-family: var(--vscode-editor-font-family);
+}
+
+.vscode-debug-panel details {
+    margin: 8px 0;
+}
+
+.vscode-debug-panel button {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 4px 8px;
+    margin-top: 8px;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.vscode-debug-panel button:hover {
+    background-color: var(--vscode-button-hoverBackground);
 }

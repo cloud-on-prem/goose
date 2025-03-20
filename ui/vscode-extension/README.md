@@ -62,6 +62,8 @@ Refer to the GitHub issues page for any known issues.
     - [x] Add contextual "Generating" indicator
     - [x] Ensure proper scroll behavior for new messages
     - [x] Use VSCode theme variables for all styling
+    - [x] Improve markdown rendering to avoid extra lines
+    - [x] Add dedicated "Generating" message indicator that appears as a separate element after user messages
 
 - [ ] Basic Chat UI Implementation
 - [ ] VSCode Integration Features
