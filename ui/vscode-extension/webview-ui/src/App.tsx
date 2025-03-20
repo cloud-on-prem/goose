@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import './vscodeStyles.css'; // Import VS Code theme variables
 // Import React Markdown for rendering markdown content
 import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 // VS Code API is available as a global when running in a webview
 declare global {
@@ -204,10 +206,75 @@ const App: React.FC = () => {
             .filter(item => item && item.type === 'text' && item.text && item.text.trim() !== '')
             .map((item, index) => (
                 <div key={index} className="whitespace-pre-wrap message-text">
-                    <ReactMarkdown>{item.text}</ReactMarkdown>
+                    <ReactMarkdown
+                        components={{
+                            // Custom code block rendering with syntax highlighting
+                            code({ node, inline, className, children, ...props }) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                const lang = match ? match[1] : '';
+
+                                if (!inline) {
+                                    return (
+                                        <SyntaxHighlighter
+                                            style={vscDarkPlus}
+                                            language={lang || 'typescript'}
+                                            PreTag="div"
+                                            customStyle={{
+                                                backgroundColor: 'var(--vscode-textCodeBlock-background)',
+                                                border: '1px solid var(--vscode-widget-border)',
+                                                borderRadius: '4px',
+                                                padding: '10px 14px',
+                                                margin: '10px 0'
+                                            }}
+                                            {...props}
+                                        >
+                                            {String(children).replace(/\n$/, '')}
+                                        </SyntaxHighlighter>
+                                    );
+                                }
+
+                                return (
+                                    <code className={className} {...props} style={{
+                                        backgroundColor: 'var(--vscode-textCodeBlock-background)',
+                                        padding: '2px 4px',
+                                        borderRadius: '3px',
+                                        color: 'var(--vscode-editor-foreground)'
+                                    }}>
+                                        {children}
+                                    </code>
+                                );
+                            },
+                            // Remove excessive paragraph spacing
+                            p({ node, children, ...props }) {
+                                return (
+                                    <p style={{ margin: '8px 0', lineHeight: '1.6' }} {...props}>
+                                        {children}
+                                    </p>
+                                );
+                            }
+                        }}
+                    >
+                        {item.text}
+                    </ReactMarkdown>
                 </div>
             ));
     };
+
+    // Add a separate component for the generating indicator
+    const GeneratingIndicator = ({ onStop }: { onStop: () => void }) => (
+        <div className="vscode-generating">
+            <div className="vscode-generating-text">Generating</div>
+            <div className="vscode-loading-dot">.</div>
+            <div className="vscode-loading-dot">.</div>
+            <div className="vscode-loading-dot">.</div>
+            <button
+                onClick={onStop}
+                className="vscode-stop-button"
+            >
+                Stop
+            </button>
+        </div>
+    );
 
     return (
         <div className="vscode-chat-container">
@@ -242,26 +309,18 @@ const App: React.FC = () => {
                         // Only render the message if it has valid content
                         if (!messageContent) return null;
 
+                        const isLastUserMessage = message.role === 'user' &&
+                            index === messages.findIndex(m => m.id === currentMessageId);
+
                         return (
                             <div key={message.id || index} className="vscode-message-container">
-                                <div className="vscode-message-header">
+                                <div className={`vscode-message-header ${message.role}`}>
                                     {message.role === 'user' ? 'You' : 'Goose'}
                                 </div>
                                 <div className={`vscode-message-content ${message.role}`}>
                                     {messageContent}
-                                    {isLoading && message.id === currentMessageId && (
-                                        <div className="vscode-generating">
-                                            <div className="vscode-generating-text">Generating</div>
-                                            <div className="vscode-loading-dot">.</div>
-                                            <div className="vscode-loading-dot">.</div>
-                                            <div className="vscode-loading-dot">.</div>
-                                            <button
-                                                onClick={stopGeneration}
-                                                className="vscode-stop-button"
-                                            >
-                                                Stop
-                                            </button>
-                                        </div>
+                                    {isLoading && isLastUserMessage && (
+                                        <GeneratingIndicator onStop={stopGeneration} />
                                     )}
                                 </div>
                             </div>

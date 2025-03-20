@@ -4,16 +4,22 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    max-height: 100vh;
     color: var(--vscode-editor-foreground);
     background-color: var(--vscode-editor-background);
     font-family: var(--vscode-font-family);
     font-size: var(--vscode-font-size);
+    overflow: hidden;
+    /* Prevent container overflow */
 }
 
 .vscode-chat-header {
-    background-color: var(--vscode-editor-background);
+    background-color: var(--vscode-editorGroupHeader-tabsBackground);
     border-bottom: 1px solid var(--vscode-panel-border);
     padding: 10px;
+    box-shadow: 0 1px 3px var(--vscode-widget-shadow);
+    flex-shrink: 0;
+    /* Prevent header from shrinking */
 }
 
 .vscode-chat-header-content {
@@ -36,6 +42,8 @@
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
 }
 
 .vscode-status-badge.running {
@@ -61,24 +69,34 @@
     padding: 10px;
     margin: 10px;
     border-radius: 4px;
+    flex-shrink: 0;
+    /* Prevent shrinking */
 }
 
 .vscode-chat-messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    background-color: var(--vscode-editor-background);
+    min-height: 0;
+    /* Critical for proper scrolling in flex container */
 }
 
 .vscode-empty-state {
     text-align: center;
     color: var(--vscode-descriptionForeground);
     margin-top: 40px;
+    padding: 20px;
+    background-color: var(--vscode-editorWidget-background);
+    border-radius: 6px;
+    border: 1px dashed var(--vscode-widget-border);
 }
 
-/* New message container styles for blocky layout */
+/* Message container styles for blocky layout */
 .vscode-message-container {
     width: 100%;
     display: flex;
@@ -86,21 +104,41 @@
     border: 1px solid var(--vscode-panel-border);
     border-radius: 6px;
     overflow: hidden;
+    box-shadow: 0 1px 2px var(--vscode-widget-shadow);
+    transition: box-shadow 0.2s ease-in-out;
+    flex-shrink: 0;
+    /* Prevent message containers from collapsing */
+}
+
+.vscode-message-container:hover {
+    box-shadow: 0 2px 5px var(--vscode-widget-shadow);
 }
 
 .vscode-message-header {
     padding: 8px 12px;
     font-weight: 500;
     font-size: 12px;
-    background-color: var(--vscode-sideBarSectionHeader-background);
-    color: var(--vscode-sideBarSectionHeader-foreground);
     border-bottom: 1px solid var(--vscode-panel-border);
+    flex-shrink: 0;
+    /* Prevent header from shrinking */
+}
+
+.vscode-message-header.user {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.vscode-message-header.assistant {
+    background-color: var(--vscode-activityBarBadge-background);
+    color: var(--vscode-activityBarBadge-foreground);
 }
 
 .vscode-message-content {
-    padding: 12px;
+    padding: 12px 16px;
     word-wrap: break-word;
-    background-color: var(--vscode-editor-background);
+    line-height: 1.5;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .vscode-message-content.user {
@@ -108,25 +146,45 @@
 }
 
 .vscode-message-content.assistant {
-    background-color: var(--vscode-editor-background);
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
 }
 
 /* Styles for the "Generating" indicator */
 .vscode-generating {
     display: flex;
     align-items: center;
-    color: var(--vscode-descriptionForeground);
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed var(--vscode-panel-border);
+    margin-top: 10px;
+    padding: 8px 10px;
+    background-color: var(--vscode-editorWidget-background);
+    border-radius: 4px;
+    border-left: 3px solid var(--vscode-progressBar-background);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.7;
+    }
 }
 
 .vscode-generating-text {
     margin-right: 4px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
 }
 
 .vscode-loading-dot {
     animation: bounce 1s infinite;
+    color: var(--vscode-progressBar-background);
+    font-weight: bold;
 }
 
 .vscode-loading-dot:nth-child(2) {
@@ -158,6 +216,7 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
+    transition: background-color 0.2s ease;
 }
 
 .vscode-stop-button:hover {
@@ -167,6 +226,9 @@
 .vscode-input-container {
     border-top: 1px solid var(--vscode-panel-border);
     padding: 16px;
+    background-color: var(--vscode-editorGroupHeader-tabsBackground);
+    flex-shrink: 0;
+    /* Prevent input container from shrinking */
 }
 
 .vscode-input-form {
@@ -182,6 +244,7 @@
     border-radius: 4px 0 0 4px;
     padding: 8px 12px;
     outline: none;
+    transition: border-color 0.2s ease;
 }
 
 .vscode-input:focus {
@@ -196,6 +259,7 @@
     border-radius: 0 4px 4px 0;
     cursor: pointer;
     font-weight: 500;
+    transition: background-color 0.2s ease;
 }
 
 .vscode-send-button:hover:not(.disabled) {
@@ -215,26 +279,84 @@
     width: 100%;
 }
 
+/* Reduce extra spacing in markdown */
+.message-text>p:first-child {
+    margin-top: 0;
+}
+
+.message-text>p:last-child {
+    margin-bottom: 0;
+}
+
 /* Code block styling */
 .message-text pre {
     background-color: var(--vscode-textCodeBlock-background);
-    padding: 10px;
+    padding: 10px 14px;
     border-radius: 4px;
     overflow-x: auto;
-    margin: 8px 0;
+    margin: 10px 0;
+    border: 1px solid var(--vscode-widget-border);
+    position: relative;
 }
 
+.message-text pre code {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+    color: var(--vscode-editor-foreground);
+    display: block;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+/* Syntax highlighting classes using VSCode theme variables */
+.message-text code .keyword {
+    color: var(--vscode-symbolIcon-keywordForeground, var(--vscode-editor-foreground));
+}
+
+.message-text code .function {
+    color: var(--vscode-symbolIcon-functionForeground, var(--vscode-editor-foreground));
+}
+
+.message-text code .string {
+    color: var(--vscode-symbolIcon-stringForeground, var(--vscode-editor-foreground));
+}
+
+.message-text code .number {
+    color: var(--vscode-symbolIcon-numberForeground, var(--vscode-editor-foreground));
+}
+
+.message-text code .comment {
+    color: var(--vscode-symbolIcon-snippetForeground, var(--vscode-editorLineNumber-foreground));
+    font-style: italic;
+}
+
+.message-text code .operator {
+    color: var(--vscode-symbolIcon-operatorForeground, var(--vscode-editor-foreground));
+}
+
+.message-text code .variable {
+    color: var(--vscode-symbolIcon-variableForeground, var(--vscode-editor-foreground));
+}
+
+.message-text code .property {
+    color: var(--vscode-symbolIcon-propertyForeground, var(--vscode-editor-foreground));
+}
+
+/* Inline code */
 .message-text code {
     font-family: var(--vscode-editor-font-family);
     font-size: var(--vscode-editor-font-size);
     background-color: var(--vscode-textCodeBlock-background);
     padding: 2px 4px;
     border-radius: 3px;
+    color: var(--vscode-editor-foreground);
 }
 
 /* Additional markdown element styling */
 .message-text p {
     margin: 8px 0;
+    line-height: 1.6;
 }
 
 .message-text h1,
@@ -246,24 +368,31 @@
     margin-top: 16px;
     margin-bottom: 8px;
     color: var(--vscode-foreground);
+    font-weight: 600;
 }
 
 .message-text ul,
 .message-text ol {
-    margin: 8px 0;
+    margin: 10px 0;
     padding-left: 24px;
+}
+
+.message-text li {
+    margin: 4px 0;
 }
 
 .message-text blockquote {
     border-left: 3px solid var(--vscode-textBlockQuote-border);
-    margin: 8px 0;
-    padding-left: 16px;
+    margin: 10px 0;
+    padding: 8px 16px;
+    background-color: var(--vscode-textBlockQuote-background);
     color: var(--vscode-textBlockQuote-foreground);
 }
 
 .message-text a {
     color: var(--vscode-textLink-foreground);
     text-decoration: none;
+    transition: color 0.2s ease;
 }
 
 .message-text a:hover {
