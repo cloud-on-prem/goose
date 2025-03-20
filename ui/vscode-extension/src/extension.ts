@@ -3,83 +3,104 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ServerManager, ServerStatus, ServerEvents } from './server/serverManager';
+import { ChatProcessor, ChatEvents } from './server/chat/chatProcessor';
+import { Message, getTextContent } from './shared/types';
 
 // Message types for communication between extension and webview
 enum MessageType {
 	HELLO = 'hello',
 	GET_ACTIVE_EDITOR_CONTENT = 'getActiveEditorContent',
 	ACTIVE_EDITOR_CONTENT = 'activeEditorContent',
-	ERROR = 'error'
+	ERROR = 'error',
+	SERVER_STATUS = 'serverStatus',
+	CHAT_MESSAGE = 'chatMessage',
+	SEND_CHAT_MESSAGE = 'sendChatMessage',
+	AI_MESSAGE = 'aiMessage',
+	STOP_GENERATION = 'stopGeneration'
 }
 
 // Interface for messages sent between extension and webview
-interface Message {
+interface WebviewMessage {
 	command: string;
 	[key: string]: any; // Additional properties
 }
 
 /**
- * Manages webview panels
+ * Manages webview panels and sidebar view
  */
-class WebviewPanel {
-	public static currentPanel: WebviewPanel | undefined;
-	private readonly _panel: vscode.WebviewPanel;
+class GooseWingmanViewProvider implements vscode.WebviewViewProvider {
+	public static readonly viewType = 'goose-wingman.chatView';
+	private _view?: vscode.WebviewView;
 	private readonly _extensionUri: vscode.Uri;
-	private _disposables: vscode.Disposable[] = [];
+	private readonly _serverManager: ServerManager;
+	private readonly _chatProcessor: ChatProcessor;
 
-	public static createOrShow(extensionUri: vscode.Uri) {
-		const column = vscode.window.activeTextEditor
-			? vscode.window.activeTextEditor.viewColumn
-			: undefined;
-
-		// If we already have a panel, show it.
-		if (WebviewPanel.currentPanel) {
-			WebviewPanel.currentPanel._panel.reveal(column);
-			return;
-		}
-
-		// Otherwise, create a new panel.
-		const panel = vscode.window.createWebviewPanel(
-			'gooseWingman',
-			'Goose Wingman',
-			column || vscode.ViewColumn.One,
-			{
-				// Enable scripts in the webview
-				enableScripts: true,
-				// Restrict the webview to only load resources from the `out` directory
-				localResourceRoots: [
-					vscode.Uri.joinPath(extensionUri, 'out'),
-					vscode.Uri.joinPath(extensionUri, 'webview-ui/dist')
-				],
-				retainContextWhenHidden: true,
-			}
-		);
-
-		WebviewPanel.currentPanel = new WebviewPanel(panel, extensionUri);
+	constructor(extensionUri: vscode.Uri, serverManager: ServerManager, chatProcessor: ChatProcessor) {
+		this._extensionUri = extensionUri;
+		this._serverManager = serverManager;
+		this._chatProcessor = chatProcessor;
 	}
 
-	private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-		this._panel = panel;
-		this._extensionUri = extensionUri;
+	resolveWebviewView(
+		webviewView: vscode.WebviewView,
+		context: vscode.WebviewViewResolveContext,
+		_token: vscode.CancellationToken
+	) {
+		this._view = webviewView;
 
-		// Set the webview's initial html content
-		this._update();
+		webviewView.webview.options = {
+			// Enable scripts in the webview
+			enableScripts: true,
+			// Restrict the webview to only load resources from the `out` directory
+			localResourceRoots: [
+				vscode.Uri.joinPath(this._extensionUri, 'out'),
+				vscode.Uri.joinPath(this._extensionUri, 'webview-ui/dist')
+			]
+		};
 
-		// Listen for when the panel is disposed
-		// This happens when the user closes the panel or when the panel is closed programmatically
-		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+		webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
 		// Handle messages from the webview
-		this._panel.webview.onDidReceiveMessage(
-			(message: Message) => {
-				this._handleMessage(message);
-			},
-			null,
-			this._disposables
-		);
+		webviewView.webview.onDidReceiveMessage(async (message) => {
+			console.log(`Received message from webview: ${JSON.stringify(message)}`);
+			await this._handleMessage(message);
+		});
+
+		// Set up event listeners for server status changes
+		this._serverManager.on(ServerEvents.STATUS_CHANGE, (status: ServerStatus) => {
+			this._sendMessageToWebview({
+				command: MessageType.SERVER_STATUS,
+				status
+			});
+		});
+
+		// Set up event listeners for chat events
+		this._chatProcessor.on(ChatEvents.MESSAGE_RECEIVED, (message: Message) => {
+			this._sendMessageToWebview({
+				command: MessageType.AI_MESSAGE,
+				message
+			});
+		});
+
+		this._chatProcessor.on(ChatEvents.ERROR, (error: Error) => {
+			this._sendMessageToWebview({
+				command: MessageType.ERROR,
+				errorMessage: error.message
+			});
+		});
+
+		// Send initial server status
+		this._sendMessageToWebview({
+			command: MessageType.SERVER_STATUS,
+			status: this._serverManager.getStatus()
+		});
+
+		// Log that the view has been resolved
+		console.log(`Webview view resolved with context: ${context.state}`);
 	}
 
-	private _handleMessage(message: Message) {
+	private async _handleMessage(message: WebviewMessage) {
 		switch (message.command) {
 			case MessageType.HELLO:
 				vscode.window.showInformationMessage(message.text);
@@ -89,8 +110,32 @@ class WebviewPanel {
 				this._sendActiveEditorContent();
 				break;
 
+			case MessageType.SEND_CHAT_MESSAGE:
+				this._handleChatMessage(message.text);
+				break;
+
+			case MessageType.STOP_GENERATION:
+				this._chatProcessor.stop();
+				break;
+
 			default:
 				console.log(`Unhandled message command: ${message.command}`);
+		}
+	}
+
+	private _handleChatMessage(text: string) {
+		this._chatProcessor.sendMessage(text).catch(error => {
+			console.error('Error handling chat message:', error);
+			this._sendMessageToWebview({
+				command: MessageType.ERROR,
+				errorMessage: error.message
+			});
+		});
+	}
+
+	private _sendMessageToWebview(message: any) {
+		if (this._view) {
+			this._view.webview.postMessage(message);
 		}
 	}
 
@@ -114,16 +159,6 @@ class WebviewPanel {
 				errorMessage: 'No active editor found'
 			});
 		}
-	}
-
-	private _sendMessageToWebview(message: Message) {
-		this._panel.webview.postMessage(message);
-	}
-
-	private _update() {
-		const webview = this._panel.webview;
-		this._panel.title = "Goose Wingman";
-		this._panel.webview.html = this._getHtmlForWebview(webview);
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
@@ -151,20 +186,6 @@ class WebviewPanel {
 
 		return indexHtml;
 	}
-
-	public dispose() {
-		WebviewPanel.currentPanel = undefined;
-
-		// Clean up our resources
-		this._panel.dispose();
-
-		while (this._disposables.length) {
-			const x = this._disposables.pop();
-			if (x) {
-				x.dispose();
-			}
-		}
-	}
 }
 
 // This method is called when your extension is activated
@@ -172,23 +193,73 @@ class WebviewPanel {
 export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "goose-vscode" is now active!');
 
+	// Create server manager and chat processor
+	const serverManager = new ServerManager(context);
+	const chatProcessor = new ChatProcessor(serverManager);
+
+	// Automatically start the server when the extension activates
+	serverManager.start().then(success => {
+		if (success) {
+			console.log('Goose server started automatically on extension activation');
+		} else {
+			console.error('Failed to automatically start the Goose server');
+		}
+	}).catch(error => {
+		console.error('Error starting Goose server:', error);
+	});
+
+	// Register the Goose Wingman View Provider
+	const provider = new GooseWingmanViewProvider(context.extensionUri, serverManager, chatProcessor);
+	const viewRegistration = vscode.window.registerWebviewViewProvider(
+		GooseWingmanViewProvider.viewType,
+		provider,
+		{
+			webviewOptions: { retainContextWhenHidden: true }
+		}
+	);
+
 	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
 	const helloDisposable = vscode.commands.registerCommand('goose-wingman.helloWorld', () => {
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
 		vscode.window.showInformationMessage('Hello World from Goose Wingman!');
 	});
 
+	// Command to focus the Wingman view
 	const startDisposable = vscode.commands.registerCommand('goose-wingman.start', () => {
-		WebviewPanel.createOrShow(context.extensionUri);
+		vscode.commands.executeCommand('goose-wingman.chatView.focus');
 	});
 
-	context.subscriptions.push(helloDisposable, startDisposable);
+	// Command to manually start the server
+	const startServerDisposable = vscode.commands.registerCommand('goose-wingman.startServer', async () => {
+		try {
+			vscode.window.showInformationMessage('Starting Goose server...');
+			await serverManager.start();
+			vscode.window.showInformationMessage('Goose server started successfully');
+		} catch (error) {
+			vscode.window.showErrorMessage(`Failed to start Goose server: ${error}`);
+		}
+	});
+
+	// Command to manually stop the server
+	const stopServerDisposable = vscode.commands.registerCommand('goose-wingman.stopServer', () => {
+		try {
+			serverManager.stop();
+			vscode.window.showInformationMessage('Goose server stopped');
+		} catch (error) {
+			vscode.window.showErrorMessage(`Failed to stop Goose server: ${error}`);
+		}
+	});
+
+	context.subscriptions.push(
+		viewRegistration,
+		helloDisposable,
+		startDisposable,
+		startServerDisposable,
+		stopServerDisposable
+	);
 }
 
 // This method is called when your extension is deactivated

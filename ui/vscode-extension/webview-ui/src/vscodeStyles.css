@@ -1,0 +1,210 @@
+/* VSCode Webview Styles - uses VSCode's CSS variables for theming */
+
+.vscode-chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: var(--vscode-editor-foreground);
+    background-color: var(--vscode-editor-background);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+}
+
+.vscode-chat-header {
+    background-color: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding: 10px;
+}
+
+.vscode-chat-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vscode-chat-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--vscode-foreground);
+}
+
+.vscode-status-container {
+    display: flex;
+}
+
+.vscode-status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.vscode-status-badge.running {
+    background-color: var(--vscode-statusBarItem-prominentBackground);
+    color: var(--vscode-statusBarItem-prominentForeground);
+}
+
+.vscode-status-badge.starting {
+    background-color: var(--vscode-statusBarItem-warningBackground);
+    color: var(--vscode-statusBarItem-warningForeground);
+}
+
+.vscode-status-badge.stopped,
+.vscode-status-badge.error {
+    background-color: var(--vscode-statusBarItem-errorBackground);
+    color: var(--vscode-statusBarItem-errorForeground);
+}
+
+.vscode-error-message {
+    background-color: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    color: var(--vscode-inputValidation-errorForeground);
+    padding: 10px;
+    margin: 10px;
+    border-radius: 4px;
+}
+
+.vscode-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.vscode-empty-state {
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    margin-top: 40px;
+}
+
+.vscode-message {
+    padding: 12px;
+    border-radius: 8px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.vscode-message.user {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    align-self: flex-end;
+}
+
+.vscode-message.assistant {
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    color: var(--vscode-editor-foreground);
+    align-self: flex-start;
+}
+
+.vscode-loading {
+    display: flex;
+    align-items: center;
+    color: var(--vscode-descriptionForeground);
+    margin: 10px 0;
+}
+
+.vscode-loading-text {
+    margin-right: 4px;
+}
+
+.vscode-loading-dot {
+    animation: bounce 1s infinite;
+}
+
+.vscode-loading-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.vscode-loading-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.vscode-stop-button {
+    margin-left: 10px;
+    padding: 4px 8px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.vscode-stop-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.vscode-input-container {
+    border-top: 1px solid var(--vscode-panel-border);
+    padding: 16px;
+}
+
+.vscode-input-form {
+    display: flex;
+    gap: 8px;
+}
+
+.vscode-input {
+    flex: 1;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px 0 0 4px;
+    padding: 8px 12px;
+    outline: none;
+}
+
+.vscode-input:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
+.vscode-send-button {
+    padding: 8px 16px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.vscode-send-button:hover:not(.disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.vscode-send-button.disabled {
+    background-color: var(--vscode-disabledForeground);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Code block styling */
+pre {
+    background-color: var(--vscode-textCodeBlock-background);
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+code {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+}
+
+/* Utils */
+.whitespace-pre-wrap {
+    white-space: pre-wrap;
+}

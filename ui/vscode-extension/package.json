@@ -12,6 +12,24 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "goose-wingman",
+          "title": "Goose Wingman",
+          "icon": "resources/goose-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "goose-wingman": [
+        {
+          "type": "webview",
+          "id": "goose-wingman.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "goose-wingman.helloWorld",
@@ -20,6 +38,14 @@
       {
         "command": "goose-wingman.start",
         "title": "Start Goose Wingman"
+      },
+      {
+        "command": "goose-wingman.startServer",
+        "title": "Goose: Start Server"
+      },
+      {
+        "command": "goose-wingman.stopServer",
+        "title": "Goose: Stop Server"
       }
     ]
   },
@@ -35,7 +61,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "^20.17.24",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@types/sinon": "^17.0.4",

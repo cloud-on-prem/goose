@@ -12,6 +12,11 @@ dist/
 *.vsix
 .vscode-test/
 
+# Binary executables 
+bin/
+bin/goosed
+bin/*.exe
+
 # Webview build assets
 webview-ui/dist/
 webview-ui/node_modules/
