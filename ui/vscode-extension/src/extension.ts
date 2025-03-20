@@ -17,7 +17,8 @@ enum MessageType {
 	CHAT_MESSAGE = 'chatMessage',
 	SEND_CHAT_MESSAGE = 'sendChatMessage',
 	AI_MESSAGE = 'aiMessage',
-	STOP_GENERATION = 'stopGeneration'
+	STOP_GENERATION = 'stopGeneration',
+	GENERATION_FINISHED = 'generationFinished'
 }
 
 // Interface for messages sent between extension and webview
@@ -87,6 +88,14 @@ class GooseWingmanViewProvider implements vscode.WebviewViewProvider {
 			this._sendMessageToWebview({
 				command: MessageType.ERROR,
 				errorMessage: error.message
+			});
+		});
+
+		this._chatProcessor.on(ChatEvents.FINISH, (message: Message, reason: string) => {
+			this._sendMessageToWebview({
+				command: MessageType.GENERATION_FINISHED,
+				message,
+				reason
 			});
 		});
 

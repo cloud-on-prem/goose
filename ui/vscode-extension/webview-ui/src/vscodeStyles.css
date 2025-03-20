@@ -151,22 +151,23 @@
 
 /* Styles for the "Generating" indicator */
 .vscode-generating-container {
-    margin: 8px 0 12px 0;
+    margin: 12px 0 16px 0;
     width: 100%;
     display: flex;
     justify-content: flex-start;
+    z-index: 10;
 }
 
 .vscode-generating {
     display: flex;
     align-items: center;
-    padding: 10px 14px;
-    background-color: var(--vscode-editorWidget-background);
-    border-radius: 6px;
-    border-left: 3px solid var(--vscode-progressBar-background);
+    padding: 12px 16px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 0 0 6px 6px;
+    border-top: none;
     animation: pulse 2s infinite;
-    max-width: 80%;
-    box-shadow: 0 1px 3px var(--vscode-widget-shadow);
+    width: 100%;
+    box-shadow: 0 2px 4px var(--vscode-widget-shadow);
 }
 
 @keyframes pulse {
@@ -184,7 +185,8 @@
 }
 
 .vscode-generating-text {
-    margin-right: 6px;
+    flex: 1;
+    margin-right: 8px;
     font-weight: 500;
     color: var(--vscode-foreground);
 }
@@ -193,8 +195,9 @@
     animation: bounce 1s infinite;
     color: var(--vscode-progressBar-background);
     font-weight: bold;
-    font-size: 16px;
-    margin-left: 1px;
+    font-size: 18px;
+    margin-left: 2px;
+    display: inline-block;
 }
 
 .vscode-loading-dot:nth-child(2) {
@@ -213,19 +216,20 @@
     }
 
     50% {
-        transform: translateY(-6px);
+        transform: translateY(-8px);
     }
 }
 
 .vscode-stop-button {
-    margin-left: 10px;
-    padding: 4px 8px;
+    margin-left: 12px;
+    padding: 4px 10px;
     background-color: var(--vscode-button-secondaryBackground);
     color: var(--vscode-button-secondaryForeground);
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
+    font-weight: 500;
     transition: background-color 0.2s ease;
 }
 

@@ -39,7 +39,8 @@ enum MessageType {
     CHAT_MESSAGE = 'chatMessage',
     SEND_CHAT_MESSAGE = 'sendChatMessage',
     AI_MESSAGE = 'aiMessage',
-    STOP_GENERATION = 'stopGeneration'
+    STOP_GENERATION = 'stopGeneration',
+    GENERATION_FINISHED = 'generationFinished'
 }
 
 // Acquire VS Code API
@@ -79,6 +80,7 @@ const App: React.FC = () => {
                 case MessageType.ERROR:
                     setErrorMessage(message.errorMessage);
                     setIsLoading(false);
+                    console.log('Setting isLoading to FALSE (error received)');
                     break;
                 case MessageType.SERVER_STATUS:
                     setServerStatus(message.status);
@@ -86,6 +88,7 @@ const App: React.FC = () => {
                 case MessageType.AI_MESSAGE:
                     console.log(`UI received message: id=${message.message.id || 'undefined'}, role=${message.message.role}`);
 
+                    // For AI messages, we keep the loading state active until we get a GENERATION_FINISHED event
                     setMessages(prevMessages => {
                         console.log(`Current UI messages count: ${prevMessages.length}`);
 
@@ -107,7 +110,11 @@ const App: React.FC = () => {
                         console.log(`Updated UI messages count: ${updatedMessages.length}`);
                         return updatedMessages;
                     });
+                    break;
+                case MessageType.GENERATION_FINISHED:
+                    console.log('Received GENERATION_FINISHED event');
                     setIsLoading(false);
+                    console.log('Setting isLoading to FALSE (generation finished)');
                     setCurrentMessageId(null);
                     break;
                 default:
@@ -166,6 +173,7 @@ const App: React.FC = () => {
         // Clear input and set loading
         setInputMessage('');
         setIsLoading(true);
+        console.log('Setting isLoading to TRUE');
     };
 
     // Stop AI generation
@@ -174,6 +182,7 @@ const App: React.FC = () => {
             command: MessageType.STOP_GENERATION
         });
         setIsLoading(false);
+        console.log('Setting isLoading to FALSE (stop generation)');
     };
 
     // Handle form submission
@@ -245,17 +254,23 @@ const App: React.FC = () => {
 
     // Add a separate component for the generating indicator
     const GeneratingIndicator = ({ onStop }: { onStop: () => void }) => (
-        <div className="vscode-generating">
-            <div className="vscode-generating-text">Generating response</div>
-            <div className="vscode-loading-dot">.</div>
-            <div className="vscode-loading-dot">.</div>
-            <div className="vscode-loading-dot">.</div>
-            <button
-                onClick={onStop}
-                className="vscode-stop-button"
-            >
-                Stop
-            </button>
+        <div className="vscode-message-container">
+            <div className="vscode-message-header assistant">
+                Goose
+            </div>
+            <div className="vscode-generating">
+                <span className="vscode-generating-text">Generating response</span>
+                <span className="vscode-loading-dot">.</span>
+                <span className="vscode-loading-dot">.</span>
+                <span className="vscode-loading-dot">.</span>
+                <button
+                    onClick={onStop}
+                    className="vscode-stop-button"
+                    title="Stop generation"
+                >
+                    Stop
+                </button>
+            </div>
         </div>
     );
 
@@ -287,6 +302,7 @@ const App: React.FC = () => {
                     <p>Messages Count: {messages.length}</p>
                     <p>Is Loading: {isLoading ? 'Yes' : 'No'}</p>
                     <p>Server Status: {serverStatus}</p>
+                    <p>Error: {errorMessage ? errorMessage : 'None'}</p>
                     <details>
                         <summary>CSS Debugging Tips</summary>
                         <ol>
@@ -295,28 +311,36 @@ const App: React.FC = () => {
                             <li>Look for conflicting CSS rules in paragraph and pre elements</li>
                         </ol>
                     </details>
-                    <button onClick={() => {
-                        // Add a test message to see styling
-                        const testMessage: Message = {
-                            id: `test-${Date.now()}`,
-                            role: 'assistant',
-                            created: Date.now(),
-                            content: [{
-                                type: 'text',
-                                text: "This is a test message with multiple lines\n\nHere are some things I can help with:\n\n- Code development and editing\n- Running shell commands\n- Exploring project structures\n- Debugging issues\n\nHere's some code:\n\n```python\ndef test():\n    print('hello')\n```\n\nAnd some more text\n\nAnd another code block:\n\n```javascript\nfunction test() {\n  console.log('Hello');\n}\n```\n\nAnd final text paragraph here."
-                            }]
-                        };
-                        setMessages(prev => [...prev, testMessage]);
-                    }}>
-                        Add Test Message
-                    </button>
-                </div>
-            )}
-
-            {/* Error Message */}
-            {errorMessage && (
-                <div className="vscode-error-message">
-                    Error: {errorMessage}
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                        <button onClick={() => {
+                            // Add a test message to see styling
+                            const testMessage: Message = {
+                                id: `test-${Date.now()}`,
+                                role: 'assistant',
+                                created: Date.now(),
+                                content: [{
+                                    type: 'text',
+                                    text: "This is a test message with multiple lines\n\nHere are some things I can help with:\n\n- Code development and editing\n- Running shell commands\n- Exploring project structures\n- Debugging issues\n\nHere's some code:\n\n```python\ndef test():\n    print('hello')\n```\n\nAnd some more text\n\nAnd another code block:\n\n```javascript\nfunction test() {\n  console.log('Hello');\n}\n```\n\nAnd final text paragraph here."
+                                }]
+                            };
+                            setMessages(prev => [...prev, testMessage]);
+                        }}>
+                            Add Test Message
+                        </button>
+                        <button onClick={() => {
+                            // Simulate an error
+                            setErrorMessage("This is a simulated error message for testing");
+                            setIsLoading(false);
+                        }}>
+                            Simulate Error
+                        </button>
+                        <button onClick={() => {
+                            // Toggle loading state
+                            setIsLoading(!isLoading);
+                        }}>
+                            Toggle Loading
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -328,33 +352,42 @@ const App: React.FC = () => {
                     </div>
                 ) : (
                     <>
+                        {/* Render all messages */}
                         {messages.map((message, index) => {
                             const messageContent = renderMessageContent(message.content);
                             // Only render the message if it has valid content
                             if (!messageContent) return null;
 
-                            // Check if this is the last user message
-                            const isLastUserMessage = message.role === 'user' &&
-                                index === messages.length - 1;
-
                             return (
-                                <React.Fragment key={message.id || index}>
-                                    <div className="vscode-message-container">
-                                        <div className={`vscode-message-header ${message.role}`}>
-                                            {message.role === 'user' ? 'You' : 'Goose'}
-                                        </div>
-                                        <div className={`vscode-message-content ${message.role}`}>
-                                            {messageContent}
-                                        </div>
+                                <div key={message.id || index} className="vscode-message-container">
+                                    <div className={`vscode-message-header ${message.role}`}>
+                                        {message.role === 'user' ? 'You' : 'Goose'}
                                     </div>
-                                    {isLoading && isLastUserMessage && (
-                                        <div className="vscode-generating-container">
-                                            <GeneratingIndicator onStop={stopGeneration} />
-                                        </div>
-                                    )}
-                                </React.Fragment>
+                                    <div className={`vscode-message-content ${message.role}`}>
+                                        {messageContent}
+                                    </div>
+                                </div>
                             );
                         })}
+
+                        {/* Error Message (placed in chat flow) */}
+                        {errorMessage && (
+                            <div className="vscode-error-message">
+                                Error: {errorMessage}
+                            </div>
+                        )}
+
+                        {/* Show generating indicator if loading */}
+                        {isLoading && !errorMessage && (
+                            <GeneratingIndicator onStop={stopGeneration} />
+                        )}
+
+                        {/* Debug indicator for isLoading state */}
+                        {showDebug && (
+                            <div style={{ padding: '10px', background: 'rgba(255,0,0,0.1)', margin: '10px 0' }}>
+                                isLoading: {isLoading ? 'TRUE' : 'FALSE'}
+                            </div>
+                        )}
                     </>
                 )}
                 <div ref={messagesEndRef} />
