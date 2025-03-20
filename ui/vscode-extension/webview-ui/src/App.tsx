@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './vscodeStyles.css'; // Import VS Code theme variables
+// Import React Markdown for rendering markdown content
+import ReactMarkdown from 'react-markdown';
 
 // VS Code API is available as a global when running in a webview
 declare global {
@@ -48,6 +50,7 @@ const App: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [serverStatus, setServerStatus] = useState<string>('stopped');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom whenever messages change
@@ -77,18 +80,31 @@ const App: React.FC = () => {
                     setServerStatus(message.status);
                     break;
                 case MessageType.AI_MESSAGE:
+                    console.log(`UI received message: id=${message.message.id || 'undefined'}, role=${message.message.role}`);
+
                     setMessages(prevMessages => {
-                        // Check if this message is already in the array
-                        if (prevMessages.some(m => m.id === message.message.id)) {
-                            // Update the existing message
-                            return prevMessages.map(m =>
-                                m.id === message.message.id ? message.message : m
-                            );
+                        console.log(`Current UI messages count: ${prevMessages.length}`);
+
+                        // If the message has no ID or content is empty, ignore it
+                        if (!message.message.content || message.message.content.length === 0) {
+                            console.log('Ignoring empty message');
+                            return prevMessages;
                         }
-                        // Add new message
-                        return [...prevMessages, message.message];
+
+                        // Check if this message is identical to the last message
+                        const lastMessage = prevMessages.length > 0 ? prevMessages[prevMessages.length - 1] : null;
+                        if (lastMessage && messagesHaveIdenticalContent(lastMessage, message.message)) {
+                            console.log('Ignoring duplicate message');
+                            return prevMessages;
+                        }
+
+                        // Append the new message to maintain full chat history
+                        const updatedMessages = [...prevMessages, message.message];
+                        console.log(`Updated UI messages count: ${updatedMessages.length}`);
+                        return updatedMessages;
                     });
                     setIsLoading(false);
+                    setCurrentMessageId(null);
                     break;
                 default:
                     console.log(`Unhandled message type: ${message.command}`);
@@ -120,15 +136,22 @@ const App: React.FC = () => {
     const sendChatMessage = () => {
         if (!inputMessage.trim()) return;
 
-        // Create a user message
+        // Create a temporary ID for this message
+        const tempId = `user-${Date.now()}`;
+        setCurrentMessageId(tempId);
+
+        // Create user message and add to chat
         const userMessage: Message = {
+            id: tempId,
             role: 'user',
-            created: Math.floor(Date.now() / 1000),
-            content: [{ type: 'text', text: inputMessage }]
+            created: Date.now(),
+            content: [{
+                type: 'text',
+                text: inputMessage
+            }]
         };
 
-        // Add to messages
-        setMessages(prevMessages => [...prevMessages, userMessage]);
+        setMessages(prev => [...prev, userMessage]);
 
         // Send to extension
         vscode.postMessage({
@@ -155,14 +178,35 @@ const App: React.FC = () => {
         sendChatMessage();
     };
 
+    // Helper to check if two messages have identical content
+    const messagesHaveIdenticalContent = (msg1: Message, msg2: Message): boolean => {
+        if (msg1.role !== msg2.role) return false;
+        if (!msg1.content || !msg2.content) return false;
+        if (msg1.content.length !== msg2.content.length) return false;
+
+        for (let i = 0; i < msg1.content.length; i++) {
+            if (msg1.content[i].type !== msg2.content[i].type) return false;
+            if (msg1.content[i].text !== msg2.content[i].text) return false;
+        }
+
+        return true;
+    };
+
     // Render content of a message
     const renderMessageContent = (content: any[]) => {
-        return content.map((item, index) => {
-            if (item.type === 'text') {
-                return <div key={index} className="whitespace-pre-wrap">{item.text}</div>;
-            }
+        // If content array is empty or null/undefined, return nothing
+        if (!content || content.length === 0) {
             return null;
-        });
+        }
+
+        // Filter out empty content items and render valid ones
+        return content
+            .filter(item => item && item.type === 'text' && item.text && item.text.trim() !== '')
+            .map((item, index) => (
+                <div key={index} className="whitespace-pre-wrap message-text">
+                    <ReactMarkdown>{item.text}</ReactMarkdown>
+                </div>
+            ));
     };
 
     return (
@@ -193,28 +237,36 @@ const App: React.FC = () => {
                         <p>No messages yet. Start a conversation!</p>
                     </div>
                 ) : (
-                    messages.map((message, index) => (
-                        <div
-                            key={message.id || index}
-                            className={`vscode-message ${message.role}`}
-                        >
-                            {renderMessageContent(message.content)}
-                        </div>
-                    ))
-                )}
-                {isLoading && (
-                    <div className="vscode-loading">
-                        <div className="vscode-loading-text">Thinking</div>
-                        <div className="vscode-loading-dot">.</div>
-                        <div className="vscode-loading-dot">.</div>
-                        <div className="vscode-loading-dot">.</div>
-                        <button
-                            onClick={stopGeneration}
-                            className="vscode-stop-button"
-                        >
-                            Stop
-                        </button>
-                    </div>
+                    messages.map((message, index) => {
+                        const messageContent = renderMessageContent(message.content);
+                        // Only render the message if it has valid content
+                        if (!messageContent) return null;
+
+                        return (
+                            <div key={message.id || index} className="vscode-message-container">
+                                <div className="vscode-message-header">
+                                    {message.role === 'user' ? 'You' : 'Goose'}
+                                </div>
+                                <div className={`vscode-message-content ${message.role}`}>
+                                    {messageContent}
+                                    {isLoading && message.id === currentMessageId && (
+                                        <div className="vscode-generating">
+                                            <div className="vscode-generating-text">Generating</div>
+                                            <div className="vscode-loading-dot">.</div>
+                                            <div className="vscode-loading-dot">.</div>
+                                            <div className="vscode-loading-dot">.</div>
+                                            <button
+                                                onClick={stopGeneration}
+                                                className="vscode-stop-button"
+                                            >
+                                                Stop
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })
                 )}
                 <div ref={messagesEndRef} />
             </div>
@@ -243,4 +295,4 @@ const App: React.FC = () => {
     );
 };
 
-export default App; 
+export default App;

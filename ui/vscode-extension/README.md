@@ -54,6 +54,14 @@ Refer to the GitHub issues page for any known issues.
   - [x] Set up secure messaging between the WebView and Goose server
   - [x] Implement a chat interface that communicates with the server
   - [x] Test server startup and communication
+  - [x] UI Enhancements
+    - [x] Add message history preservation
+    - [x] Fix message state management
+    - [x] Implement markdown rendering
+    - [x] Create a blocky message layout consistent with VSCode styling
+    - [x] Add contextual "Generating" indicator
+    - [x] Ensure proper scroll behavior for new messages
+    - [x] Use VSCode theme variables for all styling
 
 - [ ] Basic Chat UI Implementation
 - [ ] VSCode Integration Features
@@ -248,8 +256,3 @@ For testing the webview UI components:
 
 1. Navigate to the webview directory: `cd webview-ui`
 2. Run type-checking: `npm run type-check`
-3. For future UI component testing, consider adding a testing library like Jest or Vitest
-
-## License
-
-Copyright © 2024 Goose AI

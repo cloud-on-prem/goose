@@ -78,33 +78,50 @@
     margin-top: 40px;
 }
 
-.vscode-message {
+/* New message container styles for blocky layout */
+.vscode-message-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.vscode-message-header {
+    padding: 8px 12px;
+    font-weight: 500;
+    font-size: 12px;
+    background-color: var(--vscode-sideBarSectionHeader-background);
+    color: var(--vscode-sideBarSectionHeader-foreground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.vscode-message-content {
     padding: 12px;
-    border-radius: 8px;
-    max-width: 80%;
     word-wrap: break-word;
+    background-color: var(--vscode-editor-background);
 }
 
-.vscode-message.user {
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    align-self: flex-end;
+.vscode-message-content.user {
+    background-color: var(--vscode-editor-background);
 }
 
-.vscode-message.assistant {
-    background-color: var(--vscode-editor-lineHighlightBackground);
-    color: var(--vscode-editor-foreground);
-    align-self: flex-start;
+.vscode-message-content.assistant {
+    background-color: var(--vscode-editor-background);
 }
 
-.vscode-loading {
+/* Styles for the "Generating" indicator */
+.vscode-generating {
     display: flex;
     align-items: center;
     color: var(--vscode-descriptionForeground);
-    margin: 10px 0;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--vscode-panel-border);
 }
 
-.vscode-loading-text {
+.vscode-generating-text {
     margin-right: 4px;
 }
 
@@ -191,17 +208,67 @@
     opacity: 0.6;
 }
 
+/* Markdown styling */
+.message-text {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
 /* Code block styling */
-pre {
+.message-text pre {
     background-color: var(--vscode-textCodeBlock-background);
     padding: 10px;
     border-radius: 4px;
     overflow-x: auto;
+    margin: 8px 0;
 }
 
-code {
+.message-text code {
     font-family: var(--vscode-editor-font-family);
     font-size: var(--vscode-editor-font-size);
+    background-color: var(--vscode-textCodeBlock-background);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Additional markdown element styling */
+.message-text p {
+    margin: 8px 0;
+}
+
+.message-text h1,
+.message-text h2,
+.message-text h3,
+.message-text h4,
+.message-text h5,
+.message-text h6 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: var(--vscode-foreground);
+}
+
+.message-text ul,
+.message-text ol {
+    margin: 8px 0;
+    padding-left: 24px;
+}
+
+.message-text blockquote {
+    border-left: 3px solid var(--vscode-textBlockQuote-border);
+    margin: 8px 0;
+    padding-left: 16px;
+    color: var(--vscode-textBlockQuote-foreground);
+}
+
+.message-text a {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+}
+
+.message-text a:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
 }
 
 /* Utils */

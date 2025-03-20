@@ -47,28 +47,17 @@ export class ChatProcessor {
 
         // Create a user message and emit it
         const userMessage = createUserMessage(text);
+
+        // Emit the message event so UI can update immediately
         this.emit(ChatEvents.MESSAGE_RECEIVED, userMessage);
 
         // Add the message to our current messages
         this.currentMessages = [...this.currentMessages, userMessage];
+        console.log(`Added user message to conversation. Current count: ${this.currentMessages.length}`);
 
         try {
             // Reset for new completion
             this.shouldStop = false;
-
-            // Generate a unique ID for this assistant message to track it through updates
-            const assistantMessageId = `assistant-${Date.now()}`;
-
-            // Create an initial assistant message with loading state
-            const assistantMessage: Message = {
-                id: assistantMessageId,
-                role: 'assistant',
-                created: Math.floor(Date.now() / 1000),
-                content: [{ type: 'text', text: '' }]
-            };
-
-            // Emit the initial empty assistant message
-            this.emit(ChatEvents.MESSAGE_RECEIVED, assistantMessage);
 
             // Set up the fetch request for SSE
             const response = await this.sendChatRequest();
@@ -130,9 +119,24 @@ export class ChatProcessor {
 
                             switch (parsedEvent.type) {
                                 case 'Message':
-                                    // Update messages with the new message
-                                    this.currentMessages = [...this.currentMessages, parsedEvent.message];
-                                    this.eventEmitter.emit(ChatEvents.MESSAGE_RECEIVED, parsedEvent.message);
+                                    console.log(`Received message from server: role=${parsedEvent.message.role}`);
+
+                                    // Create a new assistant message with a unique ID
+                                    const assistantMessage: Message = {
+                                        id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                        role: 'assistant',
+                                        created: Math.floor(Date.now() / 1000),
+                                        content: parsedEvent.message.content
+                                    };
+
+                                    console.log(`Created new assistant message with id: ${assistantMessage.id}`);
+
+                                    // Add to conversation history
+                                    this.currentMessages = [...this.currentMessages, assistantMessage];
+                                    console.log(`Current conversation has ${this.currentMessages.length} messages`);
+
+                                    // Emit the message event so UI can update
+                                    this.eventEmitter.emit(ChatEvents.MESSAGE_RECEIVED, assistantMessage);
                                     break;
 
                                 case 'Error':

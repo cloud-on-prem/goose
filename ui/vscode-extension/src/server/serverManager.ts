@@ -71,6 +71,7 @@ export class ServerManager {
         if (!workspaceDirectory) {
             console.error('No workspace folder found');
             this.setStatus(ServerStatus.ERROR);
+            this.eventEmitter.emit(ServerEvents.ERROR, new Error('No workspace folder found'));
             return false;
         }
 
@@ -122,7 +123,7 @@ export class ServerManager {
             this.setStatus(ServerStatus.RUNNING);
             return true;
         } catch (error) {
-            console.error('Failed to start Goose server:', error);
+            console.error('Error starting Goose server:', error);
             this.setStatus(ServerStatus.ERROR);
             this.eventEmitter.emit(ServerEvents.ERROR, error);
             return false;
