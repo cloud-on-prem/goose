@@ -108,6 +108,7 @@
     transition: box-shadow 0.2s ease-in-out;
     flex-shrink: 0;
     /* Prevent message containers from collapsing */
+    position: relative;
 }
 
 .vscode-message-container:hover {
@@ -457,4 +458,148 @@
 
 .vscode-debug-panel button:hover {
     background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Copy button styles - keeping this for backward compatibility */
+.vscode-copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: transparent;
+    color: var(--vscode-descriptionForeground);
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.vscode-copy-button:hover {
+    opacity: 1 !important;
+    background-color: var(--vscode-textBlockQuote-background);
+}
+
+/* Action button bar at bottom of messages - base style for all messages */
+.vscode-message-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 4px 8px;
+    position: relative;
+    height: 28px;
+    margin-top: 0;
+    border-top: 1px solid var(--vscode-panel-border);
+    background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(255, 255, 255, 0.05));
+    border-radius: 0 0 6px 6px;
+    opacity: 0.6;
+    /* Always visible even without hover */
+    transition: opacity 0.15s ease;
+}
+
+/* User message action bar style */
+.vscode-message-content.user+.vscode-message-actions,
+.vscode-message-container:has(.vscode-message-header.user) .vscode-message-actions {
+    border-top: 1px solid var(--vscode-terminal-ansiBlue);
+    background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(255, 255, 255, 0.05));
+}
+
+/* Assistant message action bar style to match user but with a different color */
+.vscode-message-content.assistant+.vscode-message-actions,
+.vscode-message-container:has(.vscode-message-header.assistant) .vscode-message-actions {
+    border-top: 1px solid var(--vscode-activityBarBadge-background);
+    background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(255, 255, 255, 0.05));
+}
+
+.vscode-message-container:hover .vscode-message-actions {
+    opacity: 0.8;
+}
+
+/* Higher base opacity for both action bars on hover */
+.vscode-message-container:hover .vscode-message-actions {
+    opacity: 1;
+}
+
+/* Base style for action buttons - consistent across all messages */
+.vscode-action-button {
+    background-color: transparent;
+    border: none;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: 4px;
+    font-family: 'codicon';
+    font-size: 14px;
+    transition: color 0.15s ease, text-shadow 0.15s ease;
+    padding: 0;
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+    /* Always visible */
+}
+
+.vscode-action-button:hover {
+    color: var(--vscode-editorLink-activeForeground, var(--vscode-editor-foreground));
+    text-shadow: 0 0 2px var(--vscode-focusBorder, rgba(255, 255, 255, 0.2));
+}
+
+/* Make the action button more visible in user messages */
+.vscode-message-content.user+.vscode-message-actions .vscode-action-button,
+.vscode-message-container:has(.vscode-message-header.user) .vscode-action-button {
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+    /* Always visible even without hover */
+}
+
+.vscode-message-content.user+.vscode-message-actions .vscode-action-button:hover,
+.vscode-message-container:has(.vscode-message-header.user) .vscode-action-button:hover {
+    color: var(--vscode-editorLink-activeForeground, var(--vscode-editor-foreground));
+    text-shadow: 0 0 2px var(--vscode-focusBorder, rgba(255, 255, 255, 0.2));
+}
+
+/* Consistent button style across both message types */
+.vscode-action-button {
+    color: var(--vscode-editor-foreground);
+    opacity: 0.7;
+}
+
+.vscode-action-button:hover {
+    color: var(--vscode-editorLink-activeForeground, var(--vscode-editor-foreground));
+    text-shadow: 0 0 2px var(--vscode-focusBorder, rgba(255, 255, 255, 0.2));
+}
+
+/* Updated copy success message for bottom bar layout */
+.vscode-copy-success {
+    display: none;
+    /* Hide the text notification */
+}
+
+/* Animation for copy button when clicked */
+@keyframes copySuccess {
+    0% {
+        transform: scale(1);
+        color: var(--vscode-editor-foreground);
+    }
+
+    50% {
+        transform: scale(1.2);
+        color: var(--vscode-editorLink-activeForeground, var(--vscode-terminal-ansiGreen));
+    }
+
+    100% {
+        transform: scale(1);
+        color: var(--vscode-editor-foreground);
+    }
+}
+
+/* Apply animation class to the button when copied */
+.vscode-action-button.copy-success {
+    animation: copySuccess 0.6s ease-in-out;
 }

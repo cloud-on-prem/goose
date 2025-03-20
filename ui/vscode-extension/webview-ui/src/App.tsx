@@ -56,6 +56,7 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
     const [showDebug, setShowDebug] = useState<boolean>(false);
+    const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom whenever messages change
@@ -271,8 +272,42 @@ const App: React.FC = () => {
                     Stop
                 </button>
             </div>
+
+            {/* Single subtle disabled copy button with codicon */}
+            <div className="vscode-message-actions" style={{ opacity: 0.3 }}>
+                <button
+                    className="vscode-action-button"
+                    title="Cannot copy while generating"
+                    disabled
+                    style={{ cursor: 'not-allowed' }}
+                >
+                    <i className="codicon codicon-copy"></i>
+                </button>
+            </div>
         </div>
     );
+
+    // Copy message content to clipboard
+    const copyMessageToClipboard = (message: Message) => {
+        if (!message.content || message.content.length === 0) return;
+
+        // Collect all text content
+        const textContent = message.content
+            .filter(item => item && item.type === 'text' && item.text && item.text.trim() !== '')
+            .map(item => item.text)
+            .join('\n\n');
+
+        if (textContent) {
+            navigator.clipboard.writeText(textContent).then(() => {
+                // Show success animation
+                if (message.id) {
+                    setCopiedMessageId(message.id);
+                    // Reset after animation completes
+                    setTimeout(() => setCopiedMessageId(null), 600);
+                }
+            });
+        }
+    };
 
     return (
         <div className="vscode-chat-container">
@@ -365,6 +400,17 @@ const App: React.FC = () => {
                                     </div>
                                     <div className={`vscode-message-content ${message.role}`}>
                                         {messageContent}
+                                    </div>
+
+                                    {/* Replace the action buttons with just a single copy button */}
+                                    <div className="vscode-message-actions">
+                                        <button
+                                            className={`vscode-action-button ${message.id && copiedMessageId === message.id ? 'copy-success' : ''}`}
+                                            title="Copy to clipboard"
+                                            onClick={() => copyMessageToClipboard(message)}
+                                        >
+                                            <i className="codicon codicon-copy"></i>
+                                        </button>
                                     </div>
                                 </div>
                             );
