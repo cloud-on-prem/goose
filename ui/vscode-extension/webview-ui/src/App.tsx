@@ -2,9 +2,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import './vscodeStyles.css'; // Import VS Code theme variables
 // Import React Markdown for rendering markdown content
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+// Import syntax highlighter for code blocks
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import remarkGfm from 'remark-gfm';
+// Import the VSCode API for communicating with the extension
+import { vscode } from './vscode';
+// Import types
+import { MessageType } from '../../src/shared/messageTypes';
+import { Message } from '../../src/shared/types';
 
 // VS Code API is available as a global when running in a webview
 declare global {
@@ -18,18 +24,6 @@ declare global {
 }
 
 // Types
-interface Message {
-    id?: string;
-    role: 'user' | 'assistant';
-    created: number;
-    content: Array<{
-        type: string;
-        text?: string;
-        [key: string]: any;
-    }>;
-}
-
-// Code reference interface
 interface CodeReference {
     id: string;
     filePath: string;
@@ -67,7 +61,8 @@ enum MessageType {
     ADD_CODE_REFERENCE = 'addCodeReference',
     REMOVE_CODE_REFERENCE = 'removeCodeReference',
     GET_WORKSPACE_CONTEXT = 'getWorkspaceContext',
-    WORKSPACE_CONTEXT = 'workspaceContext'
+    WORKSPACE_CONTEXT = 'workspaceContext',
+    CHAT_RESPONSE = 'chatResponse'
 }
 
 // Acquire VS Code API
@@ -89,6 +84,7 @@ const App: React.FC = () => {
     const [showContextInfo, setShowContextInfo] = useState<boolean>(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
+    const [intermediateText, setIntermediateText] = useState<string | null>(null);
 
     // Scroll to bottom whenever messages change
     useEffect(() => {
@@ -98,126 +94,131 @@ const App: React.FC = () => {
     }, [messages]);
 
     useEffect(() => {
-        // Listen for messages from the extension
+        // Initial setup
+        sendHelloMessage();
+
+        // Set up message event listener
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             console.log('Received message from extension:', message);
 
+            // Ignore messages without a command
+            if (!message || !message.command) {
+                return;
+            }
+
             switch (message.command) {
-                case MessageType.ACTIVE_EDITOR_CONTENT:
-                    setEditorContent(message.content);
-                    setEditorFile(message.fileName);
-                    setErrorMessage(null);
+                case MessageType.HELLO:
+                    // Extension acknowledged our presence
                     break;
-                case MessageType.ERROR:
-                    setErrorMessage(message.errorMessage);
-                    setIsLoading(false);
-                    console.log('Setting isLoading to FALSE (error received)');
+                case MessageType.ACTIVE_EDITOR_CONTENT:
+                    // Received active editor content
                     break;
                 case MessageType.SERVER_STATUS:
+                    console.log('Received server status:', message.status);
                     setServerStatus(message.status);
                     break;
-                case MessageType.AI_MESSAGE:
-                    console.log(`UI received message: id=${message.message.id || 'undefined'}, role=${message.message.role}`);
+                case MessageType.CHAT_RESPONSE:
+                    // Only process if the message has an actual message object
+                    if (!message.message) {
+                        console.error('Received CHAT_RESPONSE without message object');
+                        return;
+                    }
 
-                    // For AI messages, we keep the loading state active until we get a GENERATION_FINISHED event
-                    safeguardedSetMessages(prevMessages => {
-                        // Skip if no ID or content
-                        if (!message.message.id) {
-                            console.log('Ignoring ID-less message');
-                            return prevMessages;
-                        }
+                    console.log('Processing CHAT_RESPONSE:', message.message);
+                    // Check for duplicate messages by ID (especially important for streaming)
+                    const messageId = message.message.id;
 
-                        // Debug the content structure before any processing
-                        console.log("Received AI message content:", message.message.content);
+                    // Make sure the message has valid content
+                    if (!message.message.content) {
+                        message.message.content = [{ type: 'text', text: '' }];
+                    }
 
-                        // Ensure the message has a valid content array
-                        if (!message.message.content) {
-                            console.log('Message has no content array, creating empty one');
-                            message.message.content = [{ type: 'text', text: '' }];
-                        } else if (message.message.content.length === 0) {
-                            console.log('Message has empty content array, adding placeholder');
-                            message.message.content.push({ type: 'text', text: '' });
-                        }
+                    // Get the text content from the message for intermediate display
+                    const textContent = message.message.content.find(item =>
+                        item.type === 'text' && item.text)?.text || '';
 
-                        // SAFETY CHECK: Ensure we're not completely replacing the messages array
-                        // If there are no previous messages but we're trying to update an AI message, 
-                        // this is likely a state inconsistency
-                        if (prevMessages.length === 0) {
-                            console.log('WARNING: Received AI message but messages array is empty');
-                            // Create synthetic user message to preserve context
-                            return [
-                                {
-                                    id: `synthetic_user_${Date.now()}`,
-                                    role: 'user',
-                                    created: Date.now(),
-                                    content: [{ type: 'text', text: 'Context lost. Please try sending a new message.' }]
-                                },
-                                message.message
-                            ];
-                        }
+                    // If we're generating and this is from the current message ID, store it as intermediate text
+                    if (isLoading && currentMessageId && messageId === currentMessageId) {
+                        // Set the intermediate text for display in the generating indicator
+                        setIntermediateText(textContent);
+                        return; // Don't add to messages array yet
+                    } else if (isLoading && !currentMessageId) {
+                        // This is likely a stray update from a previous generation
+                        // Store it as intermediateText anyway
+                        setIntermediateText(textContent);
+                        return;
+                    }
 
-                        // Debug the current state
-                        console.log(`Current messages count: ${prevMessages.length}`);
-                        prevMessages.forEach((msg, idx) => {
-                            console.log(`Message ${idx}: id=${msg.id}, role=${msg.role}`);
-                        });
+                    // Don't skip empty assistant messages during generation
+                    // Only skip empty messages after generation is complete
+                    const isInProgress = isLoading && currentMessageId !== null;
+                    const hasContent = message.message.content.some(item =>
+                        item.type === 'text' && item.text && item.text.trim() !== '');
 
-                        // Check if this message ID has been processed already
-                        if (processedMessageIds.has(message.message.id)) {
-                            console.log(`Message ID ${message.message.id} already processed, updating content if different`);
+                    if (!hasContent && message.message.role === 'assistant' && !isInProgress) {
+                        console.log('Skipping empty assistant message');
+                        return;
+                    }
 
-                            // Find the existing message to update it if needed
-                            const existingIndex = prevMessages.findIndex(m => m.id === message.message.id);
-                            if (existingIndex >= 0) {
-                                // Here we just update the content even if it's been processed before
-                                // This allows for streaming updates to work correctly
-                                const updatedMessagesArray = [...prevMessages];
+                    setMessages(prevMessages => {
+                        // Debug logging
+                        console.log('Current messages:', prevMessages.length);
 
-                                // Only update if content is actually different
-                                if (JSON.stringify(updatedMessagesArray[existingIndex].content) !==
-                                    JSON.stringify(message.message.content)) {
-                                    console.log('Content changed, updating existing message');
-                                    updatedMessagesArray[existingIndex] = message.message;
-                                    return updatedMessagesArray;
-                                } else {
-                                    console.log('Content unchanged, keeping existing message');
-                                    return prevMessages;
-                                }
-                            }
-                            return prevMessages;
-                        }
-
-                        // Mark this ID as processed
-                        setProcessedMessageIds(prev => new Set([...prev, message.message.id]));
-
-                        // Find if we already have a message with this ID
-                        const existingIndex = prevMessages.findIndex(m => m.id === message.message.id);
                         let updatedMessages;
 
-                        if (existingIndex >= 0) {
+                        // Check if this message already exists in our state (by ID)
+                        const existingIndex = prevMessages.findIndex(m => m.id === messageId);
+
+                        if (existingIndex !== -1) {
                             // Update existing message
                             const updatedMessagesArray = [...prevMessages];
                             updatedMessagesArray[existingIndex] = message.message;
                             updatedMessages = updatedMessagesArray;
-                            console.log(`Updated existing message at index ${existingIndex}`);
+                            console.log('Updated existing message at index', existingIndex);
                         } else {
                             // Append the new message
                             updatedMessages = [...prevMessages, message.message];
-                            console.log(`Added new message, total count: ${updatedMessages.length}`);
+                            console.log('Added new message, total count:', updatedMessages.length);
                         }
-
-                        // Debug: log all message IDs to help diagnose issues
-                        console.log(`Current message IDs: ${updatedMessages.map(m => m.id).join(', ')}`);
 
                         return updatedMessages;
                     });
                     break;
                 case MessageType.GENERATION_FINISHED:
                     console.log('Received GENERATION_FINISHED event');
+
+                    // If there's intermediate text, add it as the final message
+                    if (intermediateText && currentMessageId) {
+                        const finalMessage: Message = {
+                            id: currentMessageId,
+                            role: 'assistant',
+                            created: Date.now(),
+                            content: [{
+                                type: 'text',
+                                text: intermediateText
+                            }]
+                        };
+
+                        setMessages(prevMessages => {
+                            // Check if this message already exists in our state
+                            const existingIndex = prevMessages.findIndex(m => m.id === currentMessageId);
+
+                            if (existingIndex !== -1) {
+                                // Update existing message
+                                const updatedMessagesArray = [...prevMessages];
+                                updatedMessagesArray[existingIndex] = finalMessage;
+                                return updatedMessagesArray;
+                            } else {
+                                // Append the new message
+                                return [...prevMessages, finalMessage];
+                            }
+                        });
+                    }
+
                     setIsLoading(false);
-                    console.log('Setting isLoading to FALSE (generation finished)');
                     setCurrentMessageId(null);
+                    setIntermediateText(null); // Clear the intermediate text
                     break;
                 case MessageType.ADD_CODE_REFERENCE:
                     // Add a code reference to the UI
@@ -243,7 +244,8 @@ const App: React.FC = () => {
                     // No need for duplicate detection here - we'll use the messageId system
                     break;
                 default:
-                    console.log(`Unhandled message type: ${message.command}`);
+                    // Unhandled message type
+                    break;
             }
         };
 
@@ -279,9 +281,6 @@ const App: React.FC = () => {
                 newMessages = messageUpdater;
             }
 
-            // Log the message update
-            console.log(`Messages update: ${prevMessages.length} -> ${newMessages.length}`);
-
             // Never allow empty array (causes blank screen)
             if (newMessages.length === 0) {
                 console.warn('Prevented setting empty messages array');
@@ -310,12 +309,12 @@ const App: React.FC = () => {
             });
         }
 
-        // Add code references as separate content items
+        // Add code references as separate content items - only include file references, not the code itself
         if (codeReferences.length > 0) {
             for (const ref of codeReferences) {
                 content.push({
                     type: 'text',
-                    text: `From ${ref.fileName}:${ref.startLine}-${ref.endLine}:\n\n\`\`\`${ref.languageId}\n${ref.selectedText}\n\`\`\``
+                    text: `From ${ref.fileName}:${ref.startLine}-${ref.endLine}`
                 });
             }
         }
@@ -346,7 +345,6 @@ const App: React.FC = () => {
         setInputMessage('');
         setCodeReferences([]);
         setIsLoading(true);
-        console.log('Setting isLoading to TRUE (message sent)');
         setCurrentMessageId(messageId);
     };
 
@@ -363,6 +361,11 @@ const App: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         sendChatMessage();
+    };
+
+    // Handle input change 
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInputMessage(e.target.value);
     };
 
     // Helper to check if two messages have identical content
@@ -383,7 +386,6 @@ const App: React.FC = () => {
     const renderMessageContent = (content: any[]) => {
         // If content array is empty or null/undefined, show a placeholder
         if (!content || content.length === 0) {
-            console.log("Empty message content, showing placeholder");
             return (
                 <div className="message-text empty-message">
                     <i>Empty response. Waiting for content...</i>
@@ -391,25 +393,17 @@ const App: React.FC = () => {
             );
         }
 
-        // Debug the content structure
-        console.log("Message content structure:", JSON.stringify(content));
-
         // Create a filtered array of valid content items
         const validItems = content.filter(item => {
             // First check if item exists
             if (!item) {
-                console.log("Filtering out null/undefined item");
                 return false;
             }
 
             // Check if it's a text item (most common)
             if (item.type === 'text') {
-                // Text items without text property or with empty text are still filtered out
-                if (typeof item.text !== 'string') {
-                    console.log(`Filtering out item with invalid text property:`, item);
-                    return false;
-                }
-                return item.text.trim() !== '';
+                // Allow even empty strings during generation
+                return typeof item.text === 'string';
             }
 
             // Other content types might be valid, keep them
@@ -418,7 +412,6 @@ const App: React.FC = () => {
 
         // If we have no valid items after filtering, show the fallback
         if (validItems.length === 0) {
-            console.log("No valid content items after filtering, showing placeholder");
             return (
                 <div className="message-text empty-message">
                     <i>Waiting for response content...</i>
@@ -429,6 +422,32 @@ const App: React.FC = () => {
         // Map valid content items to components
         return validItems.map((item, index) => {
             if (item.type === 'text') {
+                // If the text is empty, show generating message
+                if (!item.text || item.text.trim() === '') {
+                    return (
+                        <div key={index} className="message-text empty-message">
+                            <i>Generating content...</i>
+                        </div>
+                    );
+                }
+
+                // Check if the content appears to be JSON data that needs parsing
+                let textContent = item.text;
+                if (typeof textContent === 'string' && textContent.trim().startsWith('data:')) {
+                    try {
+                        // Extract the JSON part
+                        const jsonMatch = textContent.match(/data:\s*(\{.*\})/);
+                        if (jsonMatch && jsonMatch[1]) {
+                            const jsonData = JSON.parse(jsonMatch[1]);
+                            if (jsonData.message && typeof jsonData.message === 'string') {
+                                textContent = jsonData.message;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing JSON in message:', e);
+                    }
+                }
+
                 return (
                     <div key={index} className="message-text">
                         <ReactMarkdown
@@ -473,55 +492,81 @@ const App: React.FC = () => {
                                 }
                             }}
                         >
-                            {item.text.trim()}
+                            {textContent}
                         </ReactMarkdown>
                     </div>
                 );
             } else {
-                // Handle other content types if needed
-                console.log(`Unknown content type: ${item.type}`);
-                return (
-                    <div key={index} className="message-text">
-                        <pre>{JSON.stringify(item, null, 2)}</pre>
-                    </div>
-                );
+                return null;
             }
         });
     };
 
-    // Add a separate component for the generating indicator
-    const GeneratingIndicator = ({ onStop }: { onStop: () => void }) => (
-        <div className="vscode-message-container">
-            <div className="vscode-message-header assistant">
-                Goose
-            </div>
-            <div className="vscode-generating">
-                <span className="vscode-generating-text">Generating response</span>
-                <span className="vscode-loading-dot">.</span>
-                <span className="vscode-loading-dot">.</span>
-                <span className="vscode-loading-dot">.</span>
-                <button
-                    onClick={onStop}
-                    className="vscode-stop-button"
-                    title="Stop generation"
-                >
-                    Stop
-                </button>
-            </div>
+    // Component to show generating response with intermediate content
+    const GeneratingIndicator = ({ onStop, intermediateContent = null }) => {
+        return (
+            <div className="generating-container">
+                {intermediateContent && (
+                    <div className="intermediate-content">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                                code({ node, inline, className, children, ...props }) {
+                                    const match = /language-(\w+)/.exec(className || '');
+                                    const lang = match ? match[1] : '';
 
-            {/* Single subtle disabled copy button with codicon */}
-            <div className="vscode-message-actions" style={{ opacity: 0.3 }}>
-                <button
-                    className="vscode-action-button"
-                    title="Cannot copy while generating"
-                    disabled
-                    style={{ cursor: 'not-allowed' }}
-                >
-                    <i className="codicon codicon-copy"></i>
-                </button>
+                                    if (!inline) {
+                                        return (
+                                            <SyntaxHighlighter
+                                                style={{
+                                                    ...vscDarkPlus,
+                                                    'pre[class*="language-"]': {
+                                                        background: 'var(--vscode-textCodeBlock-background)'
+                                                    },
+                                                    'code[class*="language-"]': {
+                                                        background: 'var(--vscode-textCodeBlock-background)'
+                                                    }
+                                                }}
+                                                language={lang || 'text'}
+                                                PreTag="div"
+                                                wrapLongLines={true}
+                                                {...props}
+                                            >
+                                                {String(children).replace(/\n$/, '')}
+                                            </SyntaxHighlighter>
+                                        );
+                                    }
+
+                                    return (
+                                        <code
+                                            className={`inline-code ${className || ''}`}
+                                            {...props}
+                                        >
+                                            {children}
+                                        </code>
+                                    );
+                                }
+                            }}
+                        >
+                            {intermediateContent}
+                        </ReactMarkdown>
+                    </div>
+                )}
+                <div className="generating-indicator">
+                    <span>Generating response</span>
+                    <div className="generating-actions">
+                        <button
+                            className="stop-button"
+                            onClick={onStop}
+                            title="Stop generation"
+                        >
+                            Stop
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // Copy message content to clipboard
     const copyMessageToClipboard = (message: Message) => {
@@ -701,38 +746,61 @@ const App: React.FC = () => {
         );
     };
 
+    // Header component for server status display
+    const Header = () => {
+        let statusDisplay = "STOPPED";
+        let statusClass = "status-stopped";
+
+        switch (serverStatus) {
+            case 'running':
+                statusDisplay = "RUNNING";
+                statusClass = "status-running";
+                break;
+            case 'starting':
+                statusDisplay = "STARTING";
+                statusClass = "status-starting";
+                break;
+            case 'error':
+                statusDisplay = "ERROR";
+                statusClass = "status-error";
+                break;
+            case 'stopped':
+            default:
+                if (isLoading) {
+                    statusDisplay = "GENERATING";
+                    statusClass = "status-generating";
+                }
+                break;
+        }
+
+        return (
+            <div className="vscode-header">
+                <div className="vscode-title">Goose</div>
+                <div className="vscode-file-indicator">
+                    {editorFile && (
+                        <span>{editorFile}</span>
+                    )}
+                </div>
+                <div className={`vscode-status ${statusClass}`}>
+                    {statusDisplay}
+                </div>
+                <div className="vscode-actions">
+                    <button
+                        className="vscode-action-button"
+                        onClick={() => setShowDebug(!showDebug)}
+                    >
+                        <i className="codicon codicon-debug"></i>
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="container" style={{ position: 'relative' }}>
             <div className="vscode-chat-container">
                 {/* Header */}
-                <header className="vscode-chat-header">
-                    <div className="vscode-chat-header-content">
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <h1 className="vscode-chat-title">Goose</h1>
-                            <ContextInfoButton />
-                        </div>
-                        <div className="vscode-status-container">
-                            <span className={`vscode-status-badge ${serverStatus}`}>
-                                {serverStatus.toUpperCase()}
-                            </span>
-                            <button
-                                onClick={() => setShowDebug(!showDebug)}
-                                className="vscode-debug-button"
-                                title="Toggle debug mode"
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '0',
-                                    opacity: 0.7,
-                                    fontSize: '12px'
-                                }}
-                            >
-                                🐛
-                            </button>
-                        </div>
-                    </div>
-                </header>
+                <Header />
 
                 {/* Context info panel */}
                 <ContextInfoPanel />
@@ -762,7 +830,7 @@ const App: React.FC = () => {
                                     created: Date.now(),
                                     content: [{
                                         type: 'text',
-                                        text: "This is a test message with multiple lines\n\nHere are some things I can help with:\n\n- Code development and editing\n- Running shell commands\n- Exploring project structures\n- Debugging issues\n\nHere's some code:\n\n```python\ndef test():\n    print('hello')\n```\n\nAnd some more text\n\nAnd another code block:\n\n```javascript\nfunction test() {\n  console.log('Hello');\n}\n```\n\nAnd final text paragraph here."
+                                        text: "This is a `test message` with multiple lines\n\nHere are some things I can help with:\n\n- Code development and editing\n- Running shell commands\n- Exploring project structures\n- Debugging issues\n\nHere's some code:\n\n```python\ndef test():\n    print('hello')\n```\n\nAnd some more text\n\nAnd another code block:\n\n```javascript\nfunction test() {\n  console.log('Hello');\n}\n```\n\nAnd final text paragraph here."
                                     }]
                                 };
                                 safeguardedSetMessages(prev => [...prev, testMessage]);
@@ -868,7 +936,7 @@ const App: React.FC = () => {
                                 type="text"
                                 className="message-input"
                                 value={inputMessage}
-                                onChange={(e) => setInputMessage(e.target.value)}
+                                onChange={handleInputChange}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
@@ -876,7 +944,6 @@ const App: React.FC = () => {
                                     }
                                 }}
                                 placeholder="Ask Goose anything..."
-                                disabled={serverStatus !== 'running' || isLoading}
                             />
                             <button
                                 className="send-button"

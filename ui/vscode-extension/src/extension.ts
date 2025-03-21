@@ -26,7 +26,8 @@ enum MessageType {
 	ADD_CODE_REFERENCE = 'addCodeReference',
 	REMOVE_CODE_REFERENCE = 'removeCodeReference',
 	GET_WORKSPACE_CONTEXT = 'getWorkspaceContext',
-	WORKSPACE_CONTEXT = 'workspaceContext'
+	WORKSPACE_CONTEXT = 'workspaceContext',
+	CHAT_RESPONSE = 'chatResponse'
 }
 
 // Interface for messages sent between extension and webview
@@ -91,8 +92,8 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 		// Set up event listeners for chat events
 		this._chatProcessor.on(ChatEvents.MESSAGE_RECEIVED, (message: Message) => {
 			this._sendMessageToWebview({
-				command: MessageType.AI_MESSAGE,
-				message
+				command: MessageType.CHAT_RESPONSE,
+				message: message
 			});
 		});
 
@@ -302,6 +303,29 @@ export function activate(context: vscode.ExtensionContext) {
 	const codeReferenceManager = CodeReferenceManager.getInstance();
 	const workspaceContextProvider = WorkspaceContextProvider.getInstance();
 
+	// Create the provider before starting the server
+	const provider = new GooseViewProvider(context.extensionUri, serverManager, chatProcessor);
+
+	// Register the Goose View Provider
+	const viewRegistration = vscode.window.registerWebviewViewProvider(
+		GooseViewProvider.viewType,
+		provider,
+		{
+			webviewOptions: { retainContextWhenHidden: true }
+		}
+	);
+
+	// Listen for server status changes and update the UI
+	serverManager.on('statusChanged', (status: string) => {
+		console.log(`Extension received server status change: ${status}`);
+		if (provider) {
+			provider.sendMessageToWebview({
+				command: MessageType.SERVER_STATUS,
+				status: status
+			});
+		}
+	});
+
 	// Automatically start the server when the extension activates
 	serverManager.start().then(success => {
 		if (success) {
@@ -312,16 +336,6 @@ export function activate(context: vscode.ExtensionContext) {
 	}).catch(error => {
 		console.error('Error starting Goose server:', error);
 	});
-
-	// Register the Goose View Provider
-	const provider = new GooseViewProvider(context.extensionUri, serverManager, chatProcessor);
-	const viewRegistration = vscode.window.registerWebviewViewProvider(
-		GooseViewProvider.viewType,
-		provider,
-		{
-			webviewOptions: { retainContextWhenHidden: true }
-		}
-	);
 
 	// Register code action provider
 	const codeActionProvider = new GooseCodeActionProvider();

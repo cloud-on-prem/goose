@@ -37,154 +37,239 @@ export class ChatProcessor {
     }
 
     /**
-     * Send a message to the Goose server
-     * @param text The text to send
-     * @param codeReferences Optional code references to include with the message
-     * @param messageId Optional message ID for tracking
+     * Send a message to the Goose AI
      */
     public async sendMessage(text: string, codeReferences?: any[], messageId?: string): Promise<void> {
-        if (!this.serverManager.isReady()) {
-            throw new Error('Server is not ready');
-        }
+        console.log("chatProcessor.sendMessage called with text:", text);
 
-        // Generate a consistent message ID
-        const msgId = messageId || `user_${Date.now()}`;
-        console.log(`Processing message with ID: ${msgId}`);
-
-        // Create formatted text for API request
-        let formattedText = text.trim();
-
-        // Only add the double newlines if there's actual text content
-        if (formattedText && codeReferences && codeReferences.length > 0) {
-            formattedText += '\n\n';
-        }
-
-        // Add code references to the message if provided
+        // Format message with code references if provided
+        let formattedText = text;
         if (codeReferences && codeReferences.length > 0) {
+            formattedText = text || '';
             for (const reference of codeReferences) {
-                formattedText += `From ${reference.fileName}:${reference.startLine}-${reference.endLine}:\n\n`;
-                formattedText += `\`\`\`${reference.languageId}\n${reference.selectedText}\n\`\`\`\n\n`;
+                if (formattedText.length > 0) {
+                    formattedText += '\n\n';
+                }
+                formattedText += `From ${reference.fileName}:${reference.startLine}-${reference.endLine}`;
             }
         }
 
-        // Create user message with the same ID that will be used in the UI
+        console.log("Formatted message text:", formattedText);
+
+        // Create a user message
         const userMessage: Message = {
+            id: messageId || `user_${Date.now()}`,
             role: 'user',
-            content: [{ type: 'text', text: formattedText }],
-            id: msgId,
-            created: Date.now()
+            created: Date.now(),
+            content: [{
+                type: 'text',
+                text: formattedText
+            }]
         };
 
-        console.log(`Adding user message with ID ${msgId} to conversation`);
-        this.currentMessages = [...this.currentMessages, userMessage];
-        console.log(`Current conversation has ${this.currentMessages.length} messages`);
+        // Add to current messages
+        this.currentMessages.push(userMessage);
+        console.log("Added user message to conversation, total messages:", this.currentMessages.length);
+
+        // Reset stop flag
+        this.shouldStop = false;
 
         try {
-            this.shouldStop = false;
-            console.log('Sending chat request to server');
+            // Send the message to the server
+            console.log("Sending chat request to server...");
             const response = await this.sendChatRequest();
+            console.log("Got response from server, status:", response.status);
 
             if (!response.ok) {
-                throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const reader = response.body?.getReader();
-            if (!reader) {
-                throw new Error('Failed to get response reader');
+            // Create a unique ID for the AI message
+            const aiMessageId = `ai_${Date.now()}`;
+            console.log("Created AI message ID:", aiMessageId);
+
+            // Initialize empty content
+            let fullText = '';
+
+            // Ensure the response body is available
+            if (!response.body) {
+                throw new Error('Response body is empty');
             }
 
-            this.shouldStop = true;
-            // Initialize with a unique assistant message ID that is related to the user message
-            let assistantMsgId = `ai_${msgId.replace('user_', '')}_${Date.now()}`;
-            console.log(`Generated initial assistant message ID: ${assistantMsgId}`);
+            // Create a reader for the response
+            const reader = response.body.getReader();
+            console.log("Created reader for response body");
 
+            // Create a new message object
+            console.log("Creating initial AI message");
+            const aiMessage: Message = {
+                id: aiMessageId,
+                role: 'assistant',
+                created: Date.now(),
+                content: [{
+                    type: 'text',
+                    text: ''
+                }]
+            };
+
+            // Add to current messages
+            this.currentMessages.push(aiMessage);
+            console.log("Added AI message placeholder to conversation, total messages:", this.currentMessages.length);
+
+            // Read the streaming response
+            console.log("Starting to read streaming response...");
             while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    this.shouldStop = false;
-                    this.emit(ChatEvents.FINISH,
-                        { id: assistantMsgId },
-                        'complete'
-                    );
+                // Check if we should stop
+                if (this.shouldStop) {
+                    console.log("Stopping generation (shouldStop flag is true)");
+                    reader.cancel();
+                    this.emit(ChatEvents.FINISH, aiMessage, 'stopped');
                     break;
                 }
 
-                try {
-                    const chunk = new TextDecoder().decode(value);
+                console.log("Reading chunk from stream...");
+                const { value, done } = await reader.read();
 
-                    // Log the raw chunk for debugging
-                    console.log(`Raw chunk received:`, chunk);
+                if (done) {
+                    console.log("Stream complete, emitting FINISH event");
+                    this.emit(ChatEvents.FINISH, aiMessage, 'complete');
+                    break;
+                }
 
-                    const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                // Convert the Uint8Array to a string
+                const chunk = new TextDecoder().decode(value);
+                console.log("Received chunk:", chunk);
 
-                    for (const line of lines) {
-                        try {
+                // Always update the content with whatever we have
+                fullText += chunk;
+                console.log("Updated fullText:", fullText);
+
+                // Check if the content is a valid JSON string
+                if (fullText.trim().startsWith('data:')) {
+                    // Process the content
+                    try {
+                        // Extract the messages from the data: prefix
+                        const lines = fullText.split('\n').filter(line => line.trim() !== '');
+
+                        // Get the LAST message from the response
+                        // This ensures we display the final message state
+                        let lastMessageData = null;
+                        let lastAssistantMessage = null;
+
+                        // Process each line to find all messages
+                        for (const line of lines) {
                             if (line.startsWith('data:')) {
-                                const jsonStr = line.slice(5).trim();
-                                if (jsonStr === '[DONE]') {
-                                    continue;
-                                }
+                                try {
+                                    const jsonStr = line.substring(5).trim();
+                                    if (jsonStr === '[DONE]') continue;
 
-                                // Log the parsed JSON string
-                                console.log(`Parsed JSON string:`, jsonStr);
+                                    const data = JSON.parse(jsonStr);
 
-                                const data = JSON.parse(jsonStr);
+                                    // Store the last message data we find
+                                    lastMessageData = data;
 
-                                // Log the full data object to inspect its structure
-                                console.log(`Parsed data object:`, data);
-
-                                // Ensure we have valid text content
-                                // Check if data.message exists and what format it has
-                                console.log(`Message format:`, typeof data.message, data.message);
-
-                                const messageText = this.ensureValidTextContent(data.message);
-
-                                // Log the extracted message text
-                                console.log(`Extracted message text:`, messageText);
-
-                                // Only create and emit a message if we have actual content
-                                if (messageText.trim()) {
-                                    // Create a properly formatted message
-                                    const chunkMessage: Message = {
-                                        id: assistantMsgId,
-                                        role: 'assistant',
-                                        created: Date.now(),
-                                        content: [{
-                                            type: 'text',
-                                            text: messageText
-                                        }]
-                                    };
-
-                                    console.log(`Emitting message with ID: ${assistantMsgId} and content length: ${messageText.length}`);
-                                    this.emit(ChatEvents.MESSAGE_RECEIVED, chunkMessage);
-
-                                    // Update the internal messages state to include the latest chunk
-                                    // First check if we already have a message with this ID
-                                    const existingMsgIndex = this.currentMessages.findIndex(msg => msg.id === assistantMsgId);
-                                    if (existingMsgIndex >= 0) {
-                                        // Update existing message
-                                        this.currentMessages[existingMsgIndex] = chunkMessage;
-                                    } else {
-                                        // Add new message
-                                        this.currentMessages = [...this.currentMessages, chunkMessage];
+                                    // If it's an assistant message, store it specifically
+                                    if (data.type === 'Message' &&
+                                        data.message &&
+                                        data.message.role === 'assistant') {
+                                        lastAssistantMessage = data.message;
                                     }
-                                    console.log(`Current conversation has ${this.currentMessages.length} messages`);
-                                } else {
-                                    console.log(`Skipping empty message content`);
+                                } catch (e) {
+                                    console.error('Failed to parse JSON:', e);
                                 }
                             }
-                        } catch (e) {
-                            console.error('Error parsing message chunk:', e);
                         }
+
+                        // If we found an assistant message, use it directly
+                        if (lastAssistantMessage) {
+                            console.log("Using latest assistant message:", lastAssistantMessage);
+
+                            // Update the message ID to match our expected ID pattern
+                            lastAssistantMessage.id = aiMessage.id;
+
+                            // Send the extracted message directly
+                            this.emit(ChatEvents.MESSAGE_RECEIVED, lastAssistantMessage);
+                        }
+                        // Otherwise, use any message data we found
+                        else if (lastMessageData) {
+                            console.log("Using latest message data:", lastMessageData);
+
+                            // Try to extract message content
+                            let messageText = '';
+
+                            if (lastMessageData.message &&
+                                lastMessageData.message.content &&
+                                Array.isArray(lastMessageData.message.content) &&
+                                lastMessageData.message.content[0] &&
+                                lastMessageData.message.content[0].text) {
+                                messageText = lastMessageData.message.content[0].text;
+                            } else if (typeof lastMessageData.message === 'string') {
+                                messageText = lastMessageData.message;
+                            }
+
+                            if (messageText) {
+                                console.log("Extracted message text from latest data:", messageText);
+                                const updatedMessage = { ...aiMessage };
+                                updatedMessage.content = [{
+                                    type: 'text',
+                                    text: messageText
+                                }];
+
+                                // Send the updated message
+                                this.emit(ChatEvents.MESSAGE_RECEIVED, updatedMessage);
+                            } else {
+                                // Last resort: use the raw JSON data
+                                const updatedMessage = { ...aiMessage };
+                                updatedMessage.content = [{
+                                    type: 'text',
+                                    text: JSON.stringify(lastMessageData, null, 2)
+                                }];
+
+                                this.emit(ChatEvents.MESSAGE_RECEIVED, updatedMessage);
+                            }
+                        } else {
+                            // Extreme fallback - use raw text
+                            console.log("No valid messages found, using raw text");
+                            const updatedMessage = { ...aiMessage };
+                            updatedMessage.content = [{
+                                type: 'text',
+                                text: fullText
+                            }];
+
+                            // Send the raw text as a message
+                            this.emit(ChatEvents.MESSAGE_RECEIVED, updatedMessage);
+                        }
+                    } catch (e) {
+                        console.error('Error processing chunk:', e);
+
+                        // As a fallback, just use the raw text
+                        const updatedMessage = { ...aiMessage };
+                        updatedMessage.content = [{
+                            type: 'text',
+                            text: fullText
+                        }];
+
+                        // Send the raw text as a message
+                        this.emit(ChatEvents.MESSAGE_RECEIVED, updatedMessage);
                     }
-                } catch (e) {
-                    console.error('Error processing response chunk:', e);
+                } else {
+                    // If it's not JSON, just use it as raw text
+                    const updatedMessage = { ...aiMessage };
+                    updatedMessage.content = [{
+                        type: 'text',
+                        text: fullText
+                    }];
+
+                    // Send the updated message
+                    this.emit(ChatEvents.MESSAGE_RECEIVED, updatedMessage);
                 }
             }
         } catch (error) {
-            this.shouldStop = false;
+            this.shouldStop = true;
             this.emit(ChatEvents.ERROR, error);
             throw error;
+        } finally {
+            this.abortController = null;
         }
     }
 
@@ -228,23 +313,21 @@ export class ChatProcessor {
         this.eventEmitter.off(event, listener);
     }
 
+    /**
+     * Send a chat request to the server
+     */
     private async sendChatRequest(): Promise<Response> {
         this.abortController = new AbortController();
 
-        if (!this.serverManager.isReady()) {
-            throw new Error('Server is not ready');
+        let workingDir = process.cwd();
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            workingDir = workspaceFolders[0].uri.fsPath;
         }
 
         const apiClient = this.serverManager.getApiClient();
         if (!apiClient) {
             throw new Error('API client is not available');
-        }
-
-        let workingDir = process.cwd();
-
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders && workspaceFolders.length > 0) {
-            workingDir = workspaceFolders[0].uri.fsPath;
         }
 
         return await apiClient.streamChatResponse(
@@ -261,32 +344,24 @@ export class ChatProcessor {
 
     // Add this helper function to ensure text content is properly formatted
     private ensureValidTextContent(text: any): string {
-        console.log('Ensuring valid text content for:', text);
-
         // If it's already a string
         if (typeof text === 'string') {
-            console.log('Text is already a string');
             return text;
         }
 
         // If it's an object with a text property
         if (text && typeof text === 'object') {
-            console.log('Text is an object');
-
             // Check for common message formats
             if (typeof text.text === 'string') {
-                console.log('Found text.text property');
                 return text.text;
             }
 
             if (typeof text.content === 'string') {
-                console.log('Found text.content property');
                 return text.content;
             }
 
             // Sometimes the content is an array of parts
             if (Array.isArray(text.content)) {
-                console.log('Found text.content array');
                 const combinedContent = text.content
                     .map((part: any) => {
                         if (typeof part === 'string') return part;
@@ -297,20 +372,17 @@ export class ChatProcessor {
                     .join('\n\n');
 
                 if (combinedContent) {
-                    console.log('Extracted content from array');
                     return combinedContent;
                 }
             }
 
             // If the object has a 'message' property
             if (typeof text.message === 'string') {
-                console.log('Found text.message property');
                 return text.message;
             }
 
             // Try to stringify the object if all else fails
             try {
-                console.log('Trying to JSON stringify the object');
                 const jsonString = JSON.stringify(text);
                 if (jsonString !== '{}' && jsonString !== '[]') {
                     return jsonString;
@@ -323,15 +395,41 @@ export class ChatProcessor {
         // If it's some other type, try to convert it to string
         if (text !== undefined && text !== null) {
             try {
-                console.log('Converting non-string/object to string');
                 return String(text);
             } catch (e) {
                 console.error("Could not convert message content to string:", e);
             }
         }
 
-        console.log('All extraction attempts failed, returning empty string');
         // Fallback for empty/invalid content
         return "";
     }
-} 
+
+    /**
+     * Process and handle the AI's message
+     */
+    private handleAIMessage(content: any, messageId: string): Message {
+        // Create a fresh message object with a unique ID if we don't have one
+        const aiMessage: Message = {
+            id: messageId || `ai_${Date.now()}`,
+            role: 'assistant',
+            created: Date.now(),
+            content: []
+        };
+
+        // Process the content
+        const textContent = this.ensureValidTextContent(content);
+
+        // Add the text as content
+        if (textContent) {
+            aiMessage.content.push({
+                type: 'text',
+                text: textContent
+            });
+        }
+
+        // Don't emit the message event here - only in the main function
+        return aiMessage;
+    }
+}
+

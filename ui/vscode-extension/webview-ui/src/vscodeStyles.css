@@ -155,6 +155,73 @@
     background-color: var(--vscode-editor-inactiveSelectionBackground);
 }
 
+/* Styles for the generating indicator and intermediate content */
+.generating-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px;
+    background-color: var(--vscode-editor-background);
+    border-radius: 4px;
+}
+
+.intermediate-content {
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    color: var(--vscode-editor-foreground);
+}
+
+.generating-indicator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-style: italic;
+    color: var(--vscode-descriptionForeground);
+}
+
+.generating-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.stop-button {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    padding: 4px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+.stop-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* Animation for generating text */
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
+}
+
+.generating-indicator span {
+    animation: pulse 1.5s infinite;
+}
+
 /* Styles for the "Generating" indicator */
 .vscode-generating-container {
     margin: 12px 0 16px 0;
@@ -368,7 +435,7 @@
     margin-top: 0.25em;
     padding-left: 0.25em;
     display: list-item;
-    line-height: 1.5 !important;
+    line-height: 1.6 !important;
 }
 
 .message-text li+li {
@@ -384,49 +451,78 @@
 
 /* Code blocks */
 .message-text pre {
-    background-color: transparent;
+    background-color: var(--vscode-textCodeBlock-background);
     border: 1px solid var(--vscode-widget-border);
     border-radius: 4px;
     margin: 0.5em 0;
-    padding: 0;
+    padding: 1em;
     overflow: auto;
+    width: 100% !important;
+    display: block !important;
+}
+
+/* Code blocks (pre > code) */
+.message-text pre>code {
+    display: block !important;
+    padding: 0.5em;
+    overflow-x: auto;
+    white-space: pre;
+    background-color: var(--vscode-textCodeBlock-background) !important;
+    color: var(--vscode-textPreformat-foreground);
+    margin: 0;
+    border-radius: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none;
 }
 
 /* Inline code */
 .message-text code:not(pre code),
-.message-text .inline-code {
+.message-text .inline-code,
+.message-text p code,
+.message-text li code {
     font-family: var(--vscode-editor-font-family);
     font-size: 0.9em;
     background-color: var(--vscode-textCodeBlock-background);
     color: var(--vscode-textPreformat-foreground);
     border-radius: 3px;
-    padding: 0.2em 0.4em;
+    padding: 0.1em 0.4em;
     margin: 0 0.2em;
     display: inline;
     white-space: pre-wrap;
-    vertical-align: text-bottom;
+    vertical-align: baseline;
     border: 1px solid var(--vscode-widget-border);
+    box-sizing: border-box;
+    line-height: inherit;
 }
 
-/* Code blocks (pre > code) */
-.message-text pre>code {
-    display: block;
-    padding: 0.5em;
-    overflow-x: auto;
-    white-space: pre;
-    background-color: transparent;
-    margin: 0;
-    border-radius: 0;
+/* Ensure inline code EVERYWHERE never takes up a full line */
+.message-text code:not(pre code),
+.message-text p code,
+.message-text li code,
+.message-text>code,
+.message-text *:not(pre)>code,
+.message-text div>code:not(pre code),
+.message-text div[style]>code:not(pre code),
+.message-text * div>code:not(pre code) {
+    width: auto;
+    display: inline !important;
+    box-sizing: border-box;
+    max-width: none !important;
 }
 
-/* Code blocks container */
-.message-text pre {
-    background-color: transparent;
-    border: 1px solid var(--vscode-widget-border);
-    border-radius: 4px;
-    margin: 0.5em 0;
-    padding: 0;
-    overflow: auto;
+/* Additional adjustments for list items with code */
+.message-text li code {
+    vertical-align: baseline;
+    position: relative;
+    top: -0.05em;
+}
+
+/* Prevent any divs from being block in inline code contexts */
+.message-text div:has(> code:only-child):not(:has(pre)),
+.message-text div[style]:has(> code:not(pre code)) {
+    display: inline !important;
+    width: auto !important;
 }
 
 /* For SyntaxHighlighter component */
@@ -549,8 +645,12 @@
     background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(255, 255, 255, 0.05));
     border-radius: 0 0 6px 6px;
     opacity: 0.6;
-    /* Always visible even without hover */
     transition: opacity 0.15s ease;
+}
+
+/* Higher base opacity for action bars on hover */
+.vscode-message-container:hover .vscode-message-actions {
+    opacity: 1;
 }
 
 /* User message action bar style */
@@ -565,15 +665,6 @@
 .vscode-message-container:has(.vscode-message-header.assistant) .vscode-message-actions {
     border-top: 1px solid var(--vscode-activityBarBadge-background);
     background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(255, 255, 255, 0.05));
-}
-
-.vscode-message-container:hover .vscode-message-actions {
-    opacity: 0.8;
-}
-
-/* Higher base opacity for both action bars on hover */
-.vscode-message-container:hover .vscode-message-actions {
-    opacity: 1;
 }
 
 /* Base style for action buttons - consistent across all messages */
@@ -591,32 +682,6 @@
     font-size: 14px;
     transition: color 0.15s ease, text-shadow 0.15s ease;
     padding: 0;
-    color: var(--vscode-editor-foreground);
-    opacity: 0.7;
-    /* Always visible */
-}
-
-.vscode-action-button:hover {
-    color: var(--vscode-editorLink-activeForeground, var(--vscode-editor-foreground));
-    text-shadow: 0 0 2px var(--vscode-focusBorder, rgba(255, 255, 255, 0.2));
-}
-
-/* Make the action button more visible in user messages */
-.vscode-message-content.user+.vscode-message-actions .vscode-action-button,
-.vscode-message-container:has(.vscode-message-header.user) .vscode-action-button {
-    color: var(--vscode-editor-foreground);
-    opacity: 0.7;
-    /* Always visible even without hover */
-}
-
-.vscode-message-content.user+.vscode-message-actions .vscode-action-button:hover,
-.vscode-message-container:has(.vscode-message-header.user) .vscode-action-button:hover {
-    color: var(--vscode-editorLink-activeForeground, var(--vscode-editor-foreground));
-    text-shadow: 0 0 2px var(--vscode-focusBorder, rgba(255, 255, 255, 0.2));
-}
-
-/* Consistent button style across both message types */
-.vscode-action-button {
     color: var(--vscode-editor-foreground);
     opacity: 0.7;
 }
@@ -698,8 +763,7 @@
     position: relative;
     width: 100%;
     height: 36px;
-    /* Fixed height to match reference */
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--vscode-widget-border);
 }
 
 .input-wrapper.with-references {
@@ -751,4 +815,68 @@
 .send-button svg {
     width: 12px;
     height: 12px;
+}
+
+/* Header styles */
+.vscode-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.vscode-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-right: 12px;
+}
+
+.vscode-file-indicator {
+    flex: 1;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vscode-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    margin-right: 12px;
+}
+
+.status-stopped {
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+
+.status-running {
+    background-color: var(--vscode-testing-runAction);
+    color: var(--vscode-badge-foreground);
+}
+
+.status-starting {
+    background-color: var(--vscode-progressBar-background);
+    color: var(--vscode-badge-foreground);
+}
+
+.status-error {
+    background-color: var(--vscode-inputValidation-errorBackground);
+    color: var(--vscode-inputValidation-errorForeground);
+}
+
+.status-generating {
+    background-color: var(--vscode-progressBar-background);
+    color: var(--vscode-badge-foreground);
+    animation: pulse 1.5s infinite;
+}
+
+.vscode-actions {
+    display: flex;
+    gap: 8px;
 }

@@ -306,18 +306,25 @@ export class ServerManager {
     }
 
     /**
-     * Set the server status and emit a status change event
+     * Set the server status and emit an event
      */
-    private setStatus(status: ServerStatus): void {
+    private setStatus(status: ServerStatus) {
         this.status = status;
         this.eventEmitter.emit(ServerEvents.STATUS_CHANGE, status);
+        // Also emit a general event for extension to listen to
+        this.extensionEvents.emit('statusChanged', status);
+        console.log(`Server status changed to ${status}`);
     }
 
     /**
-     * Subscribe to server events
+     * Add event listener for both ServerEvents and custom events
      */
-    public on(event: ServerEvents, listener: (...args: any[]) => void): void {
-        this.eventEmitter.on(event, listener);
+    public on(event: ServerEvents | string, listener: (...args: any[]) => void): void {
+        if (Object.values(ServerEvents).includes(event as ServerEvents)) {
+            this.eventEmitter.on(event, listener);
+        } else {
+            this.extensionEvents.on(event, listener);
+        }
     }
 
     /**
