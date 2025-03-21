@@ -104,9 +104,40 @@ const App: React.FC = () => {
     // Scroll to bottom whenever messages change
     useEffect(() => {
         if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            // Use a slight delay to ensure the UI has fully rendered
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'end',  // Align to the bottom of the container
+                    inline: 'nearest'
+                });
+            }, 100);
         }
     }, [messages]);
+
+    // Add a separate effect for session loading to properly handle scroll
+    useEffect(() => {
+        if (currentSessionId && messages.length > 0) {
+            // Allow the DOM to update first
+            setTimeout(() => {
+                // Find the container element
+                const container = document.querySelector('.message-container');
+                if (container) {
+                    // Scroll to show the header first, then smoothly to the bottom
+                    window.scrollTo(0, 0);
+                    container.scrollTop = 0;
+
+                    // After a short delay, scroll to the bottom
+                    setTimeout(() => {
+                        messagesEndRef.current?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'end'
+                        });
+                    }, 200);
+                }
+            }, 150);
+        }
+    }, [currentSessionId]);
 
     useEffect(() => {
         // Initial setup
@@ -300,8 +331,23 @@ const App: React.FC = () => {
                                 return normalizedMsg;
                             });
 
+                            // Reset scroll position
+                            const container = document.querySelector('.message-container');
+                            if (container) {
+                                container.scrollTop = 0;
+                            }
+
                             // Set the normalized messages
                             setMessages(normalizedMessages);
+
+                            // Ensure scrolling works after loading session
+                            setTimeout(() => {
+                                const container = document.querySelector('.message-container');
+                                if (container) {
+                                    // First make sure we're at the top
+                                    container.scrollTop = 0;
+                                }
+                            }, 50);
                         }
                     }
                     break;
@@ -531,15 +577,28 @@ const App: React.FC = () => {
                                                 style={{
                                                     ...vscDarkPlus,
                                                     'pre[class*="language-"]': {
-                                                        background: 'var(--vscode-textCodeBlock-background)'
+                                                        background: 'var(--vscode-textCodeBlock-background)',
+                                                        margin: '1em 0',
+                                                        padding: '1em',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid var(--vscode-widget-border)'
                                                     },
                                                     'code[class*="language-"]': {
-                                                        background: 'var(--vscode-textCodeBlock-background)'
+                                                        background: 'var(--vscode-textCodeBlock-background)',
+                                                        padding: '0',
+                                                        fontFamily: 'var(--vscode-editor-font-family)',
+                                                        fontSize: 'var(--vscode-editor-font-size)'
                                                     }
                                                 }}
                                                 language={lang || 'text'}
                                                 PreTag="div"
                                                 wrapLongLines={true}
+                                                customStyle={{
+                                                    margin: '1em 0',
+                                                    padding: '0',
+                                                    width: '100%',
+                                                    overflow: 'auto'
+                                                }}
                                                 {...props}
                                             >
                                                 {String(children).replace(/\n$/, '')}
@@ -588,15 +647,28 @@ const App: React.FC = () => {
                                                 style={{
                                                     ...vscDarkPlus,
                                                     'pre[class*="language-"]': {
-                                                        background: 'var(--vscode-textCodeBlock-background)'
+                                                        background: 'var(--vscode-textCodeBlock-background)',
+                                                        margin: '1em 0',
+                                                        padding: '1em',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid var(--vscode-widget-border)'
                                                     },
                                                     'code[class*="language-"]': {
-                                                        background: 'var(--vscode-textCodeBlock-background)'
+                                                        background: 'var(--vscode-textCodeBlock-background)',
+                                                        padding: '0',
+                                                        fontFamily: 'var(--vscode-editor-font-family)',
+                                                        fontSize: 'var(--vscode-editor-font-size)'
                                                     }
                                                 }}
                                                 language={lang || 'text'}
                                                 PreTag="div"
                                                 wrapLongLines={true}
+                                                customStyle={{
+                                                    margin: '1em 0',
+                                                    padding: '0',
+                                                    width: '100%',
+                                                    overflow: 'auto'
+                                                }}
                                                 {...props}
                                             >
                                                 {String(children).replace(/\n$/, '')}
@@ -960,30 +1032,7 @@ const App: React.FC = () => {
                                             <div className="message-text">{messageText}</div>
                                         ) : (
                                             <div className="message-text markdown">
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={{
-                                                        code({ node, inline, className, children, ...props }) {
-                                                            const match = /language-(\w+)/.exec(className || '');
-                                                            return !inline && match ? (
-                                                                <SyntaxHighlighter
-                                                                    style={vscDarkPlus}
-                                                                    language={match[1]}
-                                                                    PreTag="div"
-                                                                    {...props}
-                                                                >
-                                                                    {String(children).replace(/\n$/, '')}
-                                                                </SyntaxHighlighter>
-                                                            ) : (
-                                                                <code className={className} {...props}>
-                                                                    {children}
-                                                                </code>
-                                                            );
-                                                        }
-                                                    }}
-                                                >
-                                                    {messageText}
-                                                </ReactMarkdown>
+                                                {renderMessageContent(message.content)}
                                             </div>
                                         )}
 
@@ -992,7 +1041,7 @@ const App: React.FC = () => {
                                                 className={`copy-button ${copiedMessageId === message.id ? 'copied' : ''}`}
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(messageText);
-                                                    setCopiedMessageId(message.id);
+                                                    setCopiedMessageId(message.id || null);
                                                     setTimeout(() => setCopiedMessageId(null), 2000);
                                                 }}
                                                 title="Copy message"
