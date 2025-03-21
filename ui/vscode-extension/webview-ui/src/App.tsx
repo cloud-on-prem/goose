@@ -11,6 +11,9 @@ import { vscode } from './vscode';
 // Import types
 import { MessageType } from '../../src/shared/messageTypes';
 import { Message } from '../../src/shared/types';
+// Import new components
+import { Header } from './components/Header';
+import { SessionList, SessionMetadata } from './components/SessionList';
 
 // VS Code API is available as a global when running in a webview
 declare global {
@@ -62,7 +65,14 @@ enum MessageType {
     REMOVE_CODE_REFERENCE = 'removeCodeReference',
     GET_WORKSPACE_CONTEXT = 'getWorkspaceContext',
     WORKSPACE_CONTEXT = 'workspaceContext',
-    CHAT_RESPONSE = 'chatResponse'
+    CHAT_RESPONSE = 'chatResponse',
+    SESSIONS_LIST = 'sessionsList',
+    SESSION_LOADED = 'sessionLoaded',
+    SWITCH_SESSION = 'switchSession',
+    CREATE_SESSION = 'createSession',
+    RENAME_SESSION = 'renameSession',
+    DELETE_SESSION = 'deleteSession',
+    GET_SESSIONS = 'getSessions'
 }
 
 // Acquire VS Code API
@@ -86,6 +96,11 @@ const App: React.FC = () => {
     const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
     const [intermediateText, setIntermediateText] = useState<string | null>(null);
 
+    // New state for session management
+    const [sessions, setSessions] = useState<SessionMetadata[]>([]);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+    const [showSessionDrawer, setShowSessionDrawer] = useState<boolean>(false);
+
     // Scroll to bottom whenever messages change
     useEffect(() => {
         if (messagesEndRef.current) {
@@ -96,6 +111,7 @@ const App: React.FC = () => {
     useEffect(() => {
         // Initial setup
         sendHelloMessage();
+        fetchSessions(); // Fetch sessions on initial load
 
         // Set up message event listener
         const handleMessage = (event: MessageEvent) => {
@@ -240,6 +256,37 @@ const App: React.FC = () => {
                         setWorkspaceContext(message.context);
                     }
                     break;
+                case MessageType.SESSIONS_LIST:
+                    // Handle sessions list
+                    if (message.sessions) {
+                        console.log('Received sessions list:', message.sessions);
+                        // Ensure we're setting an array and validate session data structure
+                        const validSessions = Array.isArray(message.sessions)
+                            ? message.sessions.filter(session =>
+                                session &&
+                                typeof session === 'object' &&
+                                session.id &&
+                                session.metadata &&
+                                typeof session.metadata === 'object')
+                            : [];
+
+                        console.log('Valid sessions after filtering:', validSessions.length);
+                        setSessions(validSessions);
+                    }
+                    break;
+                case MessageType.SESSION_LOADED:
+                    // Handle session loaded event
+                    if (message.sessionId) {
+                        console.log('Loaded session:', message.sessionId);
+                        setCurrentSessionId(message.sessionId);
+
+                        // If messages are provided, replace the current messages with them
+                        if (message.messages && Array.isArray(message.messages)) {
+                            console.log('Setting messages from loaded session');
+                            setMessages(message.messages);
+                        }
+                    }
+                    break;
                 case MessageType.SEND_CHAT_MESSAGE:
                     // No need for duplicate detection here - we'll use the messageId system
                     break;
@@ -338,7 +385,8 @@ const App: React.FC = () => {
             command: MessageType.SEND_CHAT_MESSAGE,
             text: inputMessage,
             codeReferences: codeReferences,
-            messageId: messageId
+            messageId: messageId,
+            sessionId: currentSessionId
         });
 
         // Reset input and code references
@@ -346,6 +394,7 @@ const App: React.FC = () => {
         setCodeReferences([]);
         setIsLoading(true);
         setCurrentMessageId(messageId);
+        setIntermediateText(null); // Clear any previous intermediate text
     };
 
     // Stop AI generation
@@ -742,216 +791,281 @@ const App: React.FC = () => {
         );
     };
 
-    // Header component for server status display
-    const Header = () => {
-        let statusDisplay = "STOPPED";
-        let statusClass = "status-stopped";
-
-        switch (serverStatus) {
-            case 'running':
-                statusDisplay = "RUNNING";
-                statusClass = "status-running";
-                break;
-            case 'starting':
-                statusDisplay = "STARTING";
-                statusClass = "status-starting";
-                break;
-            case 'error':
-                statusDisplay = "ERROR";
-                statusClass = "status-error";
-                break;
-            case 'stopped':
-            default:
-                if (isLoading) {
-                    statusDisplay = "GENERATING";
-                    statusClass = "status-generating";
-                }
-                break;
+    // Request sessions list
+    const fetchSessions = () => {
+        try {
+            console.log('Fetching sessions...');
+            vscode.postMessage({
+                command: MessageType.GET_SESSIONS
+            });
+        } catch (err) {
+            console.error('Error fetching sessions:', err);
+            // Ensure sessions state is valid even on error
+            setSessions([]);
         }
-
-        return (
-            <div className="vscode-header">
-                <div className="vscode-title">Goose</div>
-                <div className="vscode-file-indicator">
-                    {editorFile && (
-                        <span>{editorFile}</span>
-                    )}
-                </div>
-                <div className={`vscode-status ${statusClass}`}>
-                    {statusDisplay}
-                </div>
-                <div className="vscode-actions">
-                    <button
-                        className="vscode-action-button"
-                        onClick={() => setShowDebug(!showDebug)}
-                    >
-                        <i className="codicon codicon-debug"></i>
-                    </button>
-                </div>
-            </div>
-        );
     };
 
+    const handleSessionSelect = (sessionId: string) => {
+        if (isLoading) return; // Prevent session switching during generation
+
+        // If we're already on this session, just close the drawer
+        if (sessionId === currentSessionId) {
+            setShowSessionDrawer(false);
+            return;
+        }
+
+        vscode.postMessage({
+            command: MessageType.SWITCH_SESSION,
+            sessionId
+        });
+
+        // Close the drawer after selection
+        setShowSessionDrawer(false);
+    };
+
+    const handleCreateSession = () => {
+        if (isLoading) return; // Prevent session creation during generation
+
+        vscode.postMessage({
+            command: MessageType.CREATE_SESSION
+        });
+
+        // Close the drawer after creation request
+        setShowSessionDrawer(false);
+    };
+
+    const handleRenameSession = (sessionId: string) => {
+        if (isLoading) return; // Prevent session renaming during generation
+
+        vscode.postMessage({
+            command: MessageType.RENAME_SESSION,
+            sessionId
+        });
+    };
+
+    const handleDeleteSession = (sessionId: string) => {
+        if (isLoading) return; // Prevent session deletion during generation
+
+        vscode.postMessage({
+            command: MessageType.DELETE_SESSION,
+            sessionId
+        });
+    };
+
+    const toggleSessionDrawer = () => {
+        if (isLoading) return; // Prevent toggling during generation
+
+        // If we're opening the drawer, refresh the sessions list
+        if (!showSessionDrawer) {
+            fetchSessions();
+        }
+
+        setShowSessionDrawer(!showSessionDrawer);
+    };
+
+    // Find the current session from the sessions list with safer approach
+    const currentSession = React.useMemo(() => {
+        if (!Array.isArray(sessions) || sessions.length === 0 || !currentSessionId) {
+            return null;
+        }
+
+        const session = sessions.find(s => s && s.id === currentSessionId);
+
+        // Validate session structure
+        if (!session || !session.metadata || typeof session.metadata !== 'object') {
+            return null;
+        }
+
+        return session;
+    }, [sessions, currentSessionId]);
+
+    // Render function
     return (
-        <div className="container" style={{ position: 'relative' }}>
-            <div className="vscode-chat-container">
-                {/* Header */}
-                <Header />
+        <div className="container">
+            <Header
+                status={serverStatus}
+                currentSession={currentSession}
+                onToggleSessionDrawer={toggleSessionDrawer}
+                isGenerating={isLoading}
+            />
 
-                {/* Context info panel */}
-                <ContextInfoPanel />
+            {showSessionDrawer && (
+                <SessionList
+                    sessions={sessions}
+                    currentSessionId={currentSessionId}
+                    onSessionSelect={handleSessionSelect}
+                    onCreateSession={handleCreateSession}
+                    onRenameSession={handleRenameSession}
+                    onDeleteSession={handleDeleteSession}
+                />
+            )}
 
-                {/* Debug Panel */}
-                {showDebug && (
-                    <div className="vscode-debug-panel">
-                        <h3>Debug Information</h3>
-                        <p>Messages Count: {messages.length}</p>
-                        <p>Is Loading: {isLoading ? 'Yes' : 'No'}</p>
-                        <p>Server Status: {serverStatus}</p>
-                        <p>Error: {errorMessage ? errorMessage : 'None'}</p>
-                        <details>
-                            <summary>CSS Debugging Tips</summary>
-                            <ol>
-                                <li>Check rendered HTML in Developer Tools (F12)</li>
-                                <li>Inspect message-text elements and their margins</li>
-                                <li>Look for conflicting CSS rules in paragraph and pre elements</li>
-                            </ol>
-                        </details>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                            <button onClick={() => {
-                                // Add a test message to see styling
-                                const testMessage: Message = {
-                                    id: `test-${Date.now()}`,
-                                    role: 'assistant',
-                                    created: Date.now(),
-                                    content: [{
-                                        type: 'text',
-                                        text: "This is a `test message` with multiple lines\n\nHere are some things I can help with:\n\n- Code development and editing\n- Running shell commands\n- Exploring project structures\n- Debugging issues\n\nHere's some code:\n\n```python\ndef test():\n    print('hello')\n```\n\nAnd some more text\n\nAnd another code block:\n\n```javascript\nfunction test() {\n  console.log('Hello');\n}\n```\n\nAnd final text paragraph here."
-                                    }]
-                                };
-                                safeguardedSetMessages(prev => [...prev, testMessage]);
-                            }}>
-                                Add Test Message
-                            </button>
-                            <button onClick={() => {
-                                // Simulate an error
-                                setErrorMessage("This is a simulated error message for testing");
-                                setIsLoading(false);
-                            }}>
-                                Simulate Error
-                            </button>
-                            <button onClick={() => {
-                                // Toggle loading state
-                                setIsLoading(!isLoading);
-                            }}>
-                                Toggle Loading
-                            </button>
+            {errorMessage && (
+                <div className="error-message">
+                    {errorMessage}
+                </div>
+            )}
+
+            <div className="message-container">
+                {messages.length === 0 ? (
+                    <div className="empty-state">
+                        <div className="empty-state-content">
+                            <h3>No messages yet</h3>
+                            <p>Start a conversation with Goose to get help with your code.</p>
                         </div>
                     </div>
-                )}
+                ) : (
+                    messages.map((message, index) => {
+                        const isUser = message.role === 'user';
+                        const messageText = message.content
+                            .filter((item) => item.type === 'text')
+                            .map((item) => item.text)
+                            .join('\n');
 
-                {/* Chat Messages */}
-                <div className="vscode-chat-messages">
-                    {messages.length === 0 ? (
-                        <div className="vscode-empty-state">
-                            <p>No messages yet. Start a conversation!</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Render all messages */}
-                            {messages.map((message, index) => {
-                                const messageContent = renderMessageContent(message.content);
-                                // Only render the message if it has valid content
-                                if (!messageContent) return null;
+                        // Create a group for consecutive messages from the same sender
+                        const prevMessage = index > 0 ? messages[index - 1] : null;
+                        const isFirstInGroup = !prevMessage || prevMessage.role !== message.role;
 
-                                return (
-                                    <div key={message.id || index} className="vscode-message-container">
-                                        <div className={`vscode-message-header ${message.role}`}>
-                                            {message.role === 'user' ? 'You' : 'Goose'}
+                        return (
+                            <div
+                                key={message.id}
+                                className={`message-group ${isFirstInGroup ? 'first-in-group' : ''}`}
+                            >
+                                {isFirstInGroup && (
+                                    <div className="vscode-message-group-header">
+                                        <div className="vscode-message-group-role">
+                                            {isUser ? 'You' : 'Goose'}
                                         </div>
-                                        <div className={`vscode-message-content ${message.role}`}>
-                                            {messageContent}
+                                        <div className="vscode-message-group-time">
+                                            {new Date(message.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                         </div>
+                                    </div>
+                                )}
 
-                                        {/* Replace the action buttons with just a single copy button */}
-                                        <div className="vscode-message-actions">
+                                <div
+                                    className={`message ${isUser ? 'user' : 'ai'}`}
+                                >
+                                    <div className="message-content">
+                                        {isUser ? (
+                                            <div className="message-text">{messageText}</div>
+                                        ) : (
+                                            <div className="message-text markdown">
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={{
+                                                        code({ node, inline, className, children, ...props }) {
+                                                            const match = /language-(\w+)/.exec(className || '');
+                                                            return !inline && match ? (
+                                                                <SyntaxHighlighter
+                                                                    style={vscDarkPlus}
+                                                                    language={match[1]}
+                                                                    PreTag="div"
+                                                                    {...props}
+                                                                >
+                                                                    {String(children).replace(/\n$/, '')}
+                                                                </SyntaxHighlighter>
+                                                            ) : (
+                                                                <code className={className} {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            );
+                                                        }
+                                                    }}
+                                                >
+                                                    {messageText}
+                                                </ReactMarkdown>
+                                            </div>
+                                        )}
+
+                                        <div className="message-actions">
                                             <button
-                                                className={`vscode-action-button ${message.id && copiedMessageId === message.id ? 'copy-success' : ''}`}
-                                                title="Copy to clipboard"
-                                                onClick={() => copyMessageToClipboard(message)}
+                                                className={`copy-button ${copiedMessageId === message.id ? 'copied' : ''}`}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(messageText);
+                                                    setCopiedMessageId(message.id);
+                                                    setTimeout(() => setCopiedMessageId(null), 2000);
+                                                }}
+                                                title="Copy message"
                                             >
-                                                <i className="codicon codicon-copy"></i>
+                                                {copiedMessageId === message.id ? 'Copied!' : 'Copy'}
                                             </button>
                                         </div>
                                     </div>
-                                );
-                            })}
-
-                            {/* Error Message (placed in chat flow) */}
-                            {errorMessage && (
-                                <div className="vscode-error-message">
-                                    Error: {errorMessage}
                                 </div>
-                            )}
-
-                            {/* Show generating indicator if loading */}
-                            {isLoading && !errorMessage && (
-                                <GeneratingIndicator onStop={stopGeneration} />
-                            )}
-
-                            {/* Debug indicator for isLoading state */}
-                            {showDebug && (
-                                <div style={{ padding: '10px', background: 'rgba(255,0,0,0.1)', margin: '10px 0' }}>
-                                    isLoading: {isLoading ? 'TRUE' : 'FALSE'}
-                                </div>
-                            )}
-                        </>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input Form */}
-                <div className="vscode-input-container">
-                    <form onSubmit={handleSubmit} className="vscode-input-form">
-                        {/* Code references */}
-                        {codeReferences.length > 0 && (
-                            <div className="code-references-container">
-                                {codeReferences.map(ref => (
-                                    <CodeReferenceChip
-                                        key={ref.id}
-                                        codeRef={ref}
-                                        onRemove={() => removeCodeReference(ref.id)}
-                                    />
-                                ))}
                             </div>
-                        )}
+                        );
+                    })
+                )}
 
-                        {/* Input field */}
-                        <div className={`input-wrapper ${codeReferences.length > 0 ? 'with-references' : ''}`}>
-                            <input
-                                type="text"
-                                className="message-input"
-                                value={inputMessage}
-                                onChange={handleInputChange}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleSubmit(e);
-                                    }
-                                }}
-                                placeholder="Ask Goose anything..."
-                            />
+                {/* Loading/generating indicator */}
+                {isLoading && (
+                    <div className="generating-container">
+                        <div className="generating-indicator">
+                            <div className="dot-pulse"></div>
+                            <span>Generating...</span>
                             <button
-                                className="send-button"
-                                onClick={handleSubmit}
-                                disabled={serverStatus !== 'running' || isLoading || (!inputMessage.trim() && codeReferences.length === 0)}
+                                className="stop-generation-button"
+                                onClick={stopGeneration}
+                                title="Stop generation"
                             >
-                                <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                                    <path d="M14.5 8L4 3v3.5L9 8 4 9.5V13l10.5-5z" />
-                                </svg>
+                                Stop
                             </button>
                         </div>
-                    </form>
+                        {intermediateText && (
+                            <div className="intermediate-text">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {intermediateText}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div ref={messagesEndRef} />
+            </div>
+
+            <div className="input-container">
+                {codeReferences.length > 0 && (
+                    <div className="code-references">
+                        {codeReferences.map((ref) => (
+                            <div key={ref.id} className="code-reference-chip">
+                                <span title={`${ref.filePath}:${ref.startLine}-${ref.endLine}`}>
+                                    {ref.fileName}:{ref.startLine}-{ref.endLine}
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        setCodeReferences(codeReferences.filter(r => r.id !== ref.id));
+                                    }}
+                                    title="Remove code reference"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="input-row">
+                    <textarea
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                sendChatMessage();
+                            }
+                        }}
+                        placeholder="Ask Goose a question..."
+                        disabled={isLoading}
+                    />
+
+                    <button
+                        onClick={isLoading ? stopGeneration : sendChatMessage}
+                        disabled={(!inputMessage.trim() && codeReferences.length === 0) && !isLoading}
+                        title={isLoading ? 'Stop generation' : 'Send message'}
+                    >
+                        {isLoading ? 'Stop' : 'Send'}
+                    </button>
                 </div>
             </div>
         </div>

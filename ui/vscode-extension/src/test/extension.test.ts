@@ -45,8 +45,8 @@ suite('Extension Test Suite', () => {
 		// Check that context.subscriptions was updated (command disposables should be pushed)
 		assert.strictEqual(
 			context.subscriptions?.length,
-			14,
-			'Expected 14 subscriptions to be added to context'
+			19,
+			'Expected 19 subscriptions to be added to context'
 		);
 
 		// Restore the stub

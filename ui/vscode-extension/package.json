@@ -159,6 +159,7 @@
     "vite": "^5.0.10"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.36",
     "typescript": "^5.8.2"
   }
 }
