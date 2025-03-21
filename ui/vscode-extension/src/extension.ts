@@ -6,6 +6,9 @@ import * as fs from 'fs';
 import { ServerManager, ServerStatus, ServerEvents } from './server/serverManager';
 import { ChatProcessor, ChatEvents } from './server/chat/chatProcessor';
 import { Message, getTextContent } from './shared/types';
+import { CodeReferenceManager, CodeReference } from './utils/codeReferenceManager';
+import { WorkspaceContextProvider } from './utils/workspaceContextProvider';
+import { GooseCodeActionProvider } from './utils/codeActionProvider';
 
 // Message types for communication between extension and webview
 enum MessageType {
@@ -18,7 +21,12 @@ enum MessageType {
 	SEND_CHAT_MESSAGE = 'sendChatMessage',
 	AI_MESSAGE = 'aiMessage',
 	STOP_GENERATION = 'stopGeneration',
-	GENERATION_FINISHED = 'generationFinished'
+	GENERATION_FINISHED = 'generationFinished',
+	CODE_REFERENCE = 'codeReference',
+	ADD_CODE_REFERENCE = 'addCodeReference',
+	REMOVE_CODE_REFERENCE = 'removeCodeReference',
+	GET_WORKSPACE_CONTEXT = 'getWorkspaceContext',
+	WORKSPACE_CONTEXT = 'workspaceContext'
 }
 
 // Interface for messages sent between extension and webview
@@ -36,11 +44,15 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 	private readonly _extensionUri: vscode.Uri;
 	private readonly _serverManager: ServerManager;
 	private readonly _chatProcessor: ChatProcessor;
+	private readonly _codeReferenceManager: CodeReferenceManager;
+	private readonly _workspaceContextProvider: WorkspaceContextProvider;
 
 	constructor(extensionUri: vscode.Uri, serverManager: ServerManager, chatProcessor: ChatProcessor) {
 		this._extensionUri = extensionUri;
 		this._serverManager = serverManager;
 		this._chatProcessor = chatProcessor;
+		this._codeReferenceManager = CodeReferenceManager.getInstance();
+		this._workspaceContextProvider = WorkspaceContextProvider.getInstance();
 	}
 
 	resolveWebviewView(
@@ -65,7 +77,7 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 		// Handle messages from the webview
 		webviewView.webview.onDidReceiveMessage(async (message) => {
 			console.log(`Received message from webview: ${JSON.stringify(message)}`);
-			await this._handleMessage(message);
+			await this._onDidReceiveMessage(message);
 		});
 
 		// Set up event listeners for server status changes
@@ -109,46 +121,52 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 		console.log(`Webview view resolved with context: ${context.state}`);
 	}
 
-	private async _handleMessage(message: WebviewMessage) {
+	private async _onDidReceiveMessage(message: any) {
+		console.log('Received message from webview:', message);
+
 		switch (message.command) {
 			case MessageType.HELLO:
-				vscode.window.showInformationMessage(message.text);
+				console.log('Hello from webview!');
 				break;
 
 			case MessageType.GET_ACTIVE_EDITOR_CONTENT:
-				this._sendActiveEditorContent();
+				this._getActiveEditorContent();
 				break;
 
 			case MessageType.SEND_CHAT_MESSAGE:
-				this._handleChatMessage(message.text);
+				if (message.text.trim() || (message.codeReferences && message.codeReferences.length > 0)) {
+					// Only process if there's actual content or code references
+					try {
+						// Pass the messageId along to the chat processor
+						await this._chatProcessor.sendMessage(
+							message.text,
+							message.codeReferences,
+							message.messageId
+						);
+					} catch (error) {
+						console.error('Error sending message to chat processor:', error);
+						this._sendMessageToWebview({
+							command: MessageType.ERROR,
+							errorMessage: error instanceof Error ? error.message : String(error)
+						});
+					}
+				}
 				break;
 
 			case MessageType.STOP_GENERATION:
-				this._chatProcessor.stop();
+				this._chatProcessor.stopGeneration();
+				break;
+
+			case MessageType.GET_WORKSPACE_CONTEXT:
+				this._sendWorkspaceContext();
 				break;
 
 			default:
-				console.log(`Unhandled message command: ${message.command}`);
+				console.log(`Unhandled message: ${message.command}`);
 		}
 	}
 
-	private _handleChatMessage(text: string) {
-		this._chatProcessor.sendMessage(text).catch(error => {
-			console.error('Error handling chat message:', error);
-			this._sendMessageToWebview({
-				command: MessageType.ERROR,
-				errorMessage: error.message
-			});
-		});
-	}
-
-	private _sendMessageToWebview(message: any) {
-		if (this._view) {
-			this._view.webview.postMessage(message);
-		}
-	}
-
-	private _sendActiveEditorContent() {
+	private _getActiveEditorContent() {
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
 			const document = editor.document;
@@ -168,6 +186,13 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 				errorMessage: 'No active editor found'
 			});
 		}
+	}
+
+	/**
+	 * Sends a message to the webview
+	 */
+	public _sendMessageToWebview(message: any) {
+		this.sendMessageToWebview(message);
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
@@ -195,6 +220,73 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 
 		return indexHtml;
 	}
+
+	/**
+	 * Adds a code reference to the chat input
+	 */
+	public addCodeReference() {
+		const codeReference = this._codeReferenceManager.getCodeReferenceFromSelection();
+		if (codeReference) {
+			this._sendMessageToWebview({
+				command: MessageType.ADD_CODE_REFERENCE,
+				codeReference
+			});
+		} else {
+			vscode.window.showInformationMessage('Please select some code first');
+		}
+	}
+
+	/**
+	 * Sends workspace context information to the webview
+	 */
+	private async _sendWorkspaceContext() {
+		const context = await this._workspaceContextProvider.getContext();
+		this._sendMessageToWebview({
+			command: MessageType.WORKSPACE_CONTEXT,
+			context
+		});
+	}
+
+	/**
+	 * Adds the current diagnostics to the chat
+	 */
+	public async addCurrentDiagnostics() {
+		const diagnostics = this._workspaceContextProvider.getCurrentDiagnostics();
+		const formattedDiagnostics = this._workspaceContextProvider.formatDiagnostics(diagnostics);
+		const currentFile = this._workspaceContextProvider.getCurrentFileName();
+
+		if (diagnostics.length === 0) {
+			this._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: `No issues found in ${currentFile || 'the current file'}.`
+			});
+		} else {
+			this._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: `Please help me fix these issues in ${currentFile || 'my code'}:\n\n${formattedDiagnostics}`
+			});
+		}
+
+		vscode.commands.executeCommand('goose.chatView.focus');
+	}
+
+	// Add event handler to confirm message was sent to webview
+	public sendMessageToWebview(message: any): void {
+		if (this._view && this._view.webview) {
+			try {
+				console.log(`Sending message to webview: ${message.command}`);
+				this._view.webview.postMessage(message);
+				console.log(`Successfully sent message to webview: ${message.command}`);
+				if (message.command === MessageType.AI_MESSAGE && message.message && message.message.id) {
+					console.log(`Sent AI message with ID: ${message.message.id}`);
+				}
+			} catch (error) {
+				console.error('Error sending message to webview:', error);
+			}
+		} else {
+			console.warn('Webview is not available, message not sent');
+		}
+	}
 }
 
 // This method is called when your extension is activated
@@ -204,9 +296,11 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	console.log('Congratulations, your extension "goose-vscode" is now active!');
 
-	// Create server manager and chat processor
+	// Create server manager, chat processor, and code reference manager
 	const serverManager = new ServerManager(context);
 	const chatProcessor = new ChatProcessor(serverManager);
+	const codeReferenceManager = CodeReferenceManager.getInstance();
+	const workspaceContextProvider = WorkspaceContextProvider.getInstance();
 
 	// Automatically start the server when the extension activates
 	serverManager.start().then(success => {
@@ -227,6 +321,19 @@ export function activate(context: vscode.ExtensionContext) {
 		{
 			webviewOptions: { retainContextWhenHidden: true }
 		}
+	);
+
+	// Register code action provider
+	const codeActionProvider = new GooseCodeActionProvider();
+	const supportedLanguages = [
+		'javascript', 'typescript', 'python', 'java', 'csharp',
+		'cpp', 'c', 'rust', 'go', 'php', 'ruby', 'swift', 'kotlin',
+		'html', 'css', 'markdown', 'json', 'yaml', 'plaintext'
+	];
+
+	const codeActionRegistration = vscode.languages.registerCodeActionsProvider(
+		supportedLanguages.map(lang => ({ language: lang })),
+		codeActionProvider
 	);
 
 	// The command has been defined in the package.json file
@@ -262,12 +369,111 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	// Command to ask Goose about selected code
+	const askAboutSelectionDisposable = vscode.commands.registerCommand('goose.askAboutSelection', () => {
+		provider.addCodeReference();
+		vscode.commands.executeCommand('goose.chatView.focus');
+	});
+
+	// Command to explain selected code
+	const explainCodeDisposable = vscode.commands.registerCommand('goose.explainCode', () => {
+		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		if (codeReference) {
+			provider.addCodeReference();
+			// Pre-populate with an explain question
+			provider._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: "Please explain what this code does:"
+			});
+			vscode.commands.executeCommand('goose.chatView.focus');
+		} else {
+			vscode.window.showInformationMessage('Please select some code first');
+		}
+	});
+
+	// Command to generate tests for selected code
+	const generateTestsDisposable = vscode.commands.registerCommand('goose.generateTests', () => {
+		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		if (codeReference) {
+			provider.addCodeReference();
+			// Pre-populate with a generate tests question
+			provider._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: "Please generate unit tests for this code:"
+			});
+			vscode.commands.executeCommand('goose.chatView.focus');
+		} else {
+			vscode.window.showInformationMessage('Please select some code first');
+		}
+	});
+
+	// Command to optimize selected code
+	const optimizeCodeDisposable = vscode.commands.registerCommand('goose.optimizeCode', () => {
+		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		if (codeReference) {
+			provider.addCodeReference();
+			// Pre-populate with an optimize question
+			provider._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: "Please optimize this code for better performance and readability:"
+			});
+			vscode.commands.executeCommand('goose.chatView.focus');
+		} else {
+			vscode.window.showInformationMessage('Please select some code first');
+		}
+	});
+
+	// Command to fix issues in selected code
+	const fixIssuesDisposable = vscode.commands.registerCommand('goose.fixIssues', () => {
+		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		if (codeReference) {
+			provider.addCodeReference();
+			// Pre-populate with a fix issues question
+			provider._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: "Please help me fix any issues or bugs in this code:"
+			});
+			vscode.commands.executeCommand('goose.chatView.focus');
+		} else {
+			vscode.window.showInformationMessage('Please select some code first');
+		}
+	});
+
+	// Command to document selected code
+	const documentCodeDisposable = vscode.commands.registerCommand('goose.documentCode', () => {
+		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		if (codeReference) {
+			provider.addCodeReference();
+			// Pre-populate with a document question
+			provider._sendMessageToWebview({
+				command: MessageType.CHAT_MESSAGE,
+				text: "Please generate documentation for this code:"
+			});
+			vscode.commands.executeCommand('goose.chatView.focus');
+		} else {
+			vscode.window.showInformationMessage('Please select some code first');
+		}
+	});
+
+	// Command to get diagnostics from current file
+	const getDiagnosticsDisposable = vscode.commands.registerCommand('goose.getDiagnostics', () => {
+		provider.addCurrentDiagnostics();
+	});
+
 	context.subscriptions.push(
 		viewRegistration,
 		helloDisposable,
 		startDisposable,
 		startServerDisposable,
-		stopServerDisposable
+		stopServerDisposable,
+		askAboutSelectionDisposable,
+		explainCodeDisposable,
+		generateTestsDisposable,
+		optimizeCodeDisposable,
+		fixIssuesDisposable,
+		documentCodeDisposable,
+		getDiagnosticsDisposable,
+		codeActionRegistration
 	);
 }
 

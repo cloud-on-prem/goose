@@ -51,8 +51,76 @@
       {
         "command": "goose.stopServer",
         "title": "Goose: Stop Server"
+      },
+      {
+        "command": "goose.askAboutSelection",
+        "title": "Ask Goose about this code"
+      },
+      {
+        "command": "goose.explainCode",
+        "title": "Ask Goose to explain this code"
+      },
+      {
+        "command": "goose.generateTests",
+        "title": "Ask Goose to generate tests"
+      },
+      {
+        "command": "goose.optimizeCode",
+        "title": "Ask Goose to optimize this code"
+      },
+      {
+        "command": "goose.fixIssues",
+        "title": "Ask Goose to fix issues in this code"
+      },
+      {
+        "command": "goose.documentCode",
+        "title": "Ask Goose to document this code"
+      },
+      {
+        "command": "goose.getDiagnostics",
+        "title": "Ask Goose about current problems"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "goose.askAboutSelection",
+          "when": "editorHasSelection",
+          "group": "goose"
+        },
+        {
+          "command": "goose.explainCode",
+          "when": "editorHasSelection",
+          "group": "goose"
+        },
+        {
+          "command": "goose.generateTests",
+          "when": "editorHasSelection",
+          "group": "goose"
+        },
+        {
+          "command": "goose.optimizeCode",
+          "when": "editorHasSelection",
+          "group": "goose"
+        },
+        {
+          "command": "goose.fixIssues",
+          "when": "editorHasSelection",
+          "group": "goose"
+        },
+        {
+          "command": "goose.documentCode",
+          "when": "editorHasSelection",
+          "group": "goose"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "goose.getDiagnostics",
+          "when": "editorHasDocumentFormattingProvider"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

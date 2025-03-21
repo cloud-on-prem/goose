@@ -7,6 +7,10 @@ This extension brings Goose AI functionality to Visual Studio Code.
 * Interactive chat UI similar to Cursor.so
 * Access to Goose's AI capabilities directly within VSCode
 * Support for coding assistance, explanations, and more
+* Code referencing with visual chips in the chat UI
+* Context-aware assistance based on your workspace
+* Quick actions for common coding tasks
+* Code action suggestions for diagnostics and selection
 
 ## Requirements
 
@@ -26,6 +30,47 @@ The extension requires the Goose backend server to function properly:
 3. Run `npm install` to install dependencies
 4. Run `npm run compile` to build the extension
 5. Press F5 to launch the extension in a new VS Code window
+
+## Usage
+
+### Chat Interface
+
+The Goose chat interface appears in the sidebar activity bar. Click the Goose icon to open the chat panel.
+
+### Code References
+
+You can reference code from your editor in your conversations with Goose:
+
+1. Select code in your editor
+2. Right-click and choose "Ask Goose about this code" or any of the quick action commands
+3. The code will be added as a reference chip above the input box
+4. Type your question and send
+
+### Quick Actions
+
+The extension provides several quick action commands that can be accessed by right-clicking on selected code:
+
+* **Ask Goose about this code** - General question about the selected code
+* **Ask Goose to explain this code** - Get an explanation of what the code does
+* **Ask Goose to generate tests** - Generate unit tests for the selected code
+* **Ask Goose to optimize this code** - Get suggestions on how to optimize the code
+* **Ask Goose to fix issues** - Get help fixing bugs or issues in the code
+* **Ask Goose to document this code** - Generate documentation for the code
+
+### Code Action Suggestions
+
+The extension also provides code actions in the editor:
+
+1. When there are diagnostics (errors/warnings) in your code, you'll see a "Fix with Goose" code action
+2. When you select code, you'll see actions like "Explain with Goose" and "Optimize with Goose"
+
+### Workspace Context
+
+The extension is context-aware and takes into account your workspace environment:
+
+1. Click the context indicator in the top-right of the chat panel to see current context
+2. Use the "Ask About Current Issues" button to get help with current diagnostics
+3. The extension automatically includes relevant context information in your conversations
 
 ## Extension Settings
 
@@ -52,26 +97,36 @@ Refer to the GitHub issues page for any known issues.
   - [x] Create utilities for server communication
   - [x] Add error handling and reconnection logic
   - [x] Set up secure messaging between the WebView and Goose server
-  - [x] Implement a chat interface that communicates with the server
+  - [x] Implement a sidebar view similar to Cursor for the chat interface
   - [x] Test server startup and communication
-  - [x] UI Enhancements
-    - [x] Add message history preservation
-    - [x] Fix message state management
-    - [x] Implement markdown rendering
-    - [x] Create a blocky message layout consistent with VSCode styling
-    - [x] Add contextual "Generating" indicator
-    - [x] Ensure proper scroll behavior for new messages
-    - [x] Use VSCode theme variables for all styling
-    - [x] Improve markdown rendering to avoid extra lines
-    - [x] Add dedicated "Generating" message indicator that appears as a separate element after user messages
 
-- [ ] Basic Chat UI Implementation
-- [ ] VSCode Integration Features
-- [ ] Advanced Chat Features
-- [ ] Settings and Configuration
-- [ ] Polish and Optimization
-- [ ] Testing and Documentation
-- [ ] Packaging and Distribution
+- [x] Basic Chat UI Implementation
+  - [x] Create chat container component
+  - [x] Implement message display components for user and AI messages
+  - [x] Add basic chat input functionality
+  - [x] Implement markdown rendering for responses
+  - [x] Style the chat interface using VS Code theme variables
+  - [x] Add loading indicators and error states
+  - [x] Add message state management for proper conversation history
+  - [x] Add empty state message handling
+  - [x] Implement proper message styling and layout
+  - [x] Add markdown rendering of messages
+  - [x] Add scroll positioning when new messages are added
+  - [x] Add "Generating" message indicator
+  - [x] Add ability to copy messages to clipboard
+
+- [x] VSCode Integration Features
+  - [x] Add ability to reference code from the editor
+  - [x] Implement code chips for references in messages
+  - [x] Create commands for quick actions (explain code, fix issues, etc.)
+  - [x] Add context awareness (current file, language, project type)
+  - [x] Implement code action suggestions for diagnostics
+  - [x] Add workspace context information panel
+  - [x] Integrate with diagnostics for error fixing
+
+## License
+
+This extension is licensed under the MIT License.
 
 ## Architecture
 
