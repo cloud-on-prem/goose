@@ -834,24 +834,6 @@ const App: React.FC = () => {
         setShowSessionDrawer(false);
     };
 
-    const handleRenameSession = (sessionId: string) => {
-        if (isLoading) return; // Prevent session renaming during generation
-
-        vscode.postMessage({
-            command: MessageType.RENAME_SESSION,
-            sessionId
-        });
-    };
-
-    const handleDeleteSession = (sessionId: string) => {
-        if (isLoading) return; // Prevent session deletion during generation
-
-        vscode.postMessage({
-            command: MessageType.DELETE_SESSION,
-            sessionId
-        });
-    };
-
     const toggleSessionDrawer = () => {
         if (isLoading) return; // Prevent toggling during generation
 
@@ -895,8 +877,6 @@ const App: React.FC = () => {
                     currentSessionId={currentSessionId}
                     onSessionSelect={handleSessionSelect}
                     onCreateSession={handleCreateSession}
-                    onRenameSession={handleRenameSession}
-                    onDeleteSession={handleDeleteSession}
                 />
             )}
 

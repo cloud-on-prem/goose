@@ -19,8 +19,8 @@ export const SessionIndicator: React.FC<SessionIndicatorProps> = ({
         typeof currentSession.metadata === 'object';
 
     const sessionName = isValidSession
-        ? (currentSession.metadata.description || `Session ${currentSession.id}`)
-        : 'No active session';
+        ? (currentSession.metadata.title || `Session ${currentSession.id.slice(0, 8)}`)
+        : 'New Chat';
 
     return (
         <div
