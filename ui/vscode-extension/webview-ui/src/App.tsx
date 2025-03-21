@@ -917,7 +917,11 @@ const App: React.FC = () => {
                                             {isUser ? 'You' : 'Goose'}
                                         </div>
                                         <div className="vscode-message-group-time">
-                                            {new Date(message.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                            {new Date(message.created).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false
+                                            })}
                                         </div>
                                     </div>
                                 )}
