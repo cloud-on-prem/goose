@@ -9,6 +9,7 @@ export interface SessionMetadata {
     modified: string;
     metadata: {
         working_dir: string;
+        title?: string;
         description: string;
         message_count: number;
         total_tokens: number;
@@ -52,63 +53,47 @@ export class SessionManager {
             const apiClient = this.serverManager.getApiClient();
             if (!apiClient || !this.serverManager.isReady()) {
                 console.error('Cannot fetch sessions: Server not ready');
-                return this.createMockSessions();
+                return [];
             }
 
             try {
                 const sessions = await apiClient.listSessions();
                 if (Array.isArray(sessions) && sessions.length > 0) {
-                    this.sessions = sessions;
-                    this.emit(SessionEvents.SESSIONS_LOADED, sessions);
-                    return sessions;
+                    console.log(`Fetched ${sessions.length} sessions from API`);
+
+                    // Process sessions to ensure they match our expected format
+                    const processedSessions = sessions.map(session => {
+                        // Make sure each session has a title and it's based on description if needed
+                        if (!session.metadata.title && session.metadata.description) {
+                            session.metadata.title = session.metadata.description;
+                        } else if (!session.metadata.title) {
+                            session.metadata.title = `Session ${session.id.slice(0, 8)}`;
+                        }
+                        return session;
+                    });
+
+                    this.sessions = processedSessions;
+                    this.emit(SessionEvents.SESSIONS_LOADED, processedSessions);
+                    return processedSessions;
                 } else {
-                    // No sessions from API, create mock ones
-                    return this.createMockSessions();
+                    // No sessions available
+                    console.log('No sessions returned from API');
+                    this.sessions = [];
+                    this.emit(SessionEvents.SESSIONS_LOADED, []);
+                    return [];
                 }
             } catch (error) {
                 console.error('Error fetching sessions from API:', error);
-                return this.createMockSessions();
+                this.sessions = [];
+                this.emit(SessionEvents.SESSIONS_LOADED, []);
+                return [];
             }
         } catch (error) {
             console.error('Error in fetchSessions:', error);
-            return this.createMockSessions();
+            this.sessions = [];
+            this.emit(SessionEvents.SESSIONS_LOADED, []);
+            return [];
         }
-    }
-
-    /**
-     * Create mock sessions for UI testing
-     */
-    private createMockSessions(): SessionMetadata[] {
-        const workingDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '/';
-
-        const mockSessions: SessionMetadata[] = [
-            {
-                id: 'mock_session_1',
-                path: `${workingDir}/mock_session_1`,
-                modified: new Date().toISOString(),
-                metadata: {
-                    working_dir: workingDir,
-                    description: 'Mock Session 1',
-                    message_count: 5,
-                    total_tokens: 1250
-                }
-            },
-            {
-                id: 'mock_session_2',
-                path: `${workingDir}/mock_session_2`,
-                modified: new Date(Date.now() - 86400000).toISOString(), // yesterday
-                metadata: {
-                    working_dir: workingDir,
-                    description: 'Mock Session 2',
-                    message_count: 10,
-                    total_tokens: 2500
-                }
-            }
-        ];
-
-        this.sessions = mockSessions;
-        this.emit(SessionEvents.SESSIONS_LOADED, mockSessions);
-        return mockSessions;
     }
 
     /**
@@ -119,50 +104,29 @@ export class SessionManager {
             const apiClient = this.serverManager.getApiClient();
             if (!apiClient || !this.serverManager.isReady()) {
                 console.error(`Cannot load session ${sessionId}: Server not ready`);
-                return this.loadMockSession(sessionId);
+                return null;
             }
 
             try {
                 const session = await apiClient.getSessionHistory(sessionId);
+
+                // Make sure the session has a title property
+                if (!session.metadata.title && session.metadata.description) {
+                    session.metadata.title = session.metadata.description;
+                }
+
                 this.currentSessionId = sessionId;
                 this.currentSession = session;
                 this.emit(SessionEvents.SESSION_LOADED, session);
                 return session;
             } catch (error) {
                 console.error(`Error loading session ${sessionId} from API:`, error);
-                return this.loadMockSession(sessionId);
+                return null;
             }
         } catch (error) {
             console.error(`Error in loadSession ${sessionId}:`, error);
-            return this.loadMockSession(sessionId);
-        }
-    }
-
-    /**
-     * Load a mock session for UI testing
-     */
-    private loadMockSession(sessionId: string): Session | null {
-        // Find the session metadata
-        const sessionMeta = this.sessions.find(s => s.id === sessionId);
-        if (!sessionMeta) {
-            // If we have no sessions yet, fetch them first
-            if (this.sessions.length === 0) {
-                this.fetchSessions();
-            }
             return null;
         }
-
-        // Create a mock session
-        const mockSession: Session = {
-            session_id: sessionId,
-            metadata: sessionMeta.metadata,
-            messages: []
-        };
-
-        this.currentSessionId = sessionId;
-        this.currentSession = mockSession;
-        this.emit(SessionEvents.SESSION_LOADED, mockSession);
-        return mockSession;
     }
 
     /**
@@ -195,41 +159,32 @@ export class SessionManager {
                 return null;
             }
 
-            // Mock session creation with local data instead of API request
-            const sessionId = `session_${Date.now()}`;
-            const sessionDesc = description || `Session ${new Date().toLocaleString()}`;
+            try {
+                // Create a new session on the server
+                const response = await apiClient.request('/sessions', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        working_dir: workingDir,
+                        title: description || `Session ${new Date().toLocaleString()}`
+                    })
+                });
 
-            // Create a mock session
-            const mockSession: Session = {
-                session_id: sessionId,
-                metadata: {
-                    working_dir: workingDir,
-                    description: sessionDesc,
-                    message_count: 0,
-                    total_tokens: 0
-                },
-                messages: []
-            };
+                const sessionData = await response.json();
+                const sessionId = sessionData.id;
 
-            // Add the session to the list
-            const mockSessionMetadata: SessionMetadata = {
-                id: sessionId,
-                path: `${workingDir}/${sessionId}`,
-                modified: new Date().toISOString(),
-                metadata: mockSession.metadata
-            };
+                if (!sessionId) {
+                    throw new Error('Failed to create session: No session ID returned');
+                }
 
-            // Update local state
-            this.sessions.push(mockSessionMetadata);
-            this.currentSessionId = sessionId;
-            this.currentSession = mockSession;
+                // Load the newly created session
+                await this.loadSession(sessionId);
 
-            // Emit events
-            this.emit(SessionEvents.SESSION_CREATED, mockSession);
-            this.emit(SessionEvents.SESSION_LOADED, mockSession);
-            this.emit(SessionEvents.SESSIONS_LOADED, this.sessions);
-
-            return sessionId;
+                return sessionId;
+            } catch (error) {
+                console.error('Error creating session via API:', error);
+                this.emit(SessionEvents.ERROR, error);
+                return null;
+            }
         } catch (error) {
             console.error('Error creating session:', error);
             this.emit(SessionEvents.ERROR, error);

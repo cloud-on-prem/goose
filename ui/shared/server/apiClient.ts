@@ -253,21 +253,146 @@ export class ApiClient {
 
     /**
      * List available sessions
-     * @returns List of sessions
+     * @returns Array of session metadata
      */
     public async listSessions(): Promise<any[]> {
-        const response = await this.request('/sessions');
-        return await response.json();
+        try {
+            const response = await this.request('/sessions');
+            const data = await response.json();
+
+            // Log the response structure
+            this.logger.info(`Sessions API response type: ${typeof data}`);
+            if (typeof data === 'object' && data !== null) {
+                const keys = Object.keys(data);
+                this.logger.info(`Sessions API response keys: ${JSON.stringify(keys)}`);
+            }
+
+            // Handle the case where response is an object with a 'sessions' property
+            if (data && typeof data === 'object' && Array.isArray(data.sessions)) {
+                this.logger.info(`Found sessions array in response with ${data.sessions.length} items`);
+
+                return data.sessions.map((session: any) => ({
+                    id: session.id || '',
+                    path: session.path || '',
+                    modified: session.modified || session.updated_at || new Date().toISOString(),
+                    metadata: {
+                        working_dir: session.metadata?.working_dir || session.working_dir || '',
+                        title: session.metadata?.title || session.title || `Session ${session.id}`,
+                        description: session.metadata?.description || session.description || `Session ${session.id}`,
+                        message_count: session.metadata?.message_count || session.message_count || 0,
+                        total_tokens: session.metadata?.total_tokens || session.total_tokens || 0
+                    }
+                }));
+            }
+
+            // Handle the case where response is already an array
+            if (Array.isArray(data)) {
+                this.logger.info(`API returned sessions as direct array with ${data.length} items`);
+
+                return data.map((session: any) => ({
+                    id: session.id || '',
+                    path: session.path || '',
+                    modified: session.modified || session.updated_at || new Date().toISOString(),
+                    metadata: {
+                        working_dir: session.metadata?.working_dir || session.working_dir || '',
+                        title: session.metadata?.title || session.title || `Session ${session.id}`,
+                        description: session.metadata?.description || session.description || `Session ${session.id}`,
+                        message_count: session.metadata?.message_count || session.message_count || 0,
+                        total_tokens: session.metadata?.total_tokens || session.total_tokens || 0
+                    }
+                }));
+            }
+
+            // If we get here, the response format is unexpected
+            this.logger.error('Unexpected sessions API response format:', data);
+            return [];
+        } catch (error) {
+            this.logger.error('Failed to list sessions:', error);
+            return [];
+        }
     }
 
     /**
      * Get session history
      * @param sessionId The session ID
-     * @returns Session history
+     * @returns Session data with messages
      */
     public async getSessionHistory(sessionId: string): Promise<any> {
-        const response = await this.request(`/sessions/${sessionId}`);
-        return await response.json();
+        try {
+            const response = await this.request(`/sessions/${sessionId}`);
+            const data = await response.json();
+
+            // Log response structure
+            this.logger.info(`Session history API response type: ${typeof data}`);
+            if (typeof data === 'object' && data !== null) {
+                const keys = Object.keys(data);
+                this.logger.info(`Session history API response keys: ${JSON.stringify(keys)}`);
+            }
+
+            // Build a standardized session object
+            const session = {
+                session_id: sessionId,
+                metadata: {
+                    working_dir: '',
+                    title: `Session ${sessionId}`,
+                    description: `Session ${sessionId}`,
+                    message_count: 0,
+                    total_tokens: 0
+                },
+                messages: []
+            };
+
+            // Handle different potential formats
+            if (data) {
+                // Extract metadata
+                if (data.metadata && typeof data.metadata === 'object') {
+                    // Metadata is in a dedicated field
+                    session.metadata = {
+                        ...session.metadata,
+                        ...data.metadata,
+                        // Ensure title is set
+                        title: data.metadata.title || data.metadata.description || session.metadata.title
+                    };
+                } else {
+                    // Metadata might be at the root level
+                    session.metadata = {
+                        working_dir: data.working_dir || data.metadata?.working_dir || '',
+                        title: data.title || data.metadata?.title || data.description || data.metadata?.description || `Session ${sessionId}`,
+                        description: data.description || data.metadata?.description || data.title || data.metadata?.title || `Session ${sessionId}`,
+                        message_count: data.message_count || data.metadata?.message_count || 0,
+                        total_tokens: data.total_tokens || data.metadata?.total_tokens || 0
+                    };
+                }
+
+                // Extract messages
+                if (Array.isArray(data.messages)) {
+                    session.messages = data.messages;
+                } else if (data.history && Array.isArray(data.history)) {
+                    session.messages = data.history;
+                }
+
+                // Update message count based on actual messages if needed
+                if (session.messages.length > 0 && session.metadata.message_count === 0) {
+                    session.metadata.message_count = session.messages.length;
+                }
+            }
+
+            return session;
+        } catch (error) {
+            this.logger.error(`Failed to get session history for ${sessionId}:`, error);
+            // Return an empty session rather than throwing
+            return {
+                session_id: sessionId,
+                metadata: {
+                    working_dir: '',
+                    title: `Session ${sessionId}`,
+                    description: `Session ${sessionId}`,
+                    message_count: 0,
+                    total_tokens: 0
+                },
+                messages: []
+            };
+        }
     }
 
     /**
