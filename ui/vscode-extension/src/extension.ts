@@ -9,6 +9,8 @@ import { Message, getTextContent } from './shared/types';
 import { CodeReferenceManager, CodeReference } from './utils/codeReferenceManager';
 import { WorkspaceContextProvider } from './utils/workspaceContextProvider';
 import { GooseCodeActionProvider } from './utils/codeActionProvider';
+import { MessageType as ExtMessageType } from './shared/messageTypes';
+import { SessionManager, SessionEvents } from './server/chat/sessionManager';
 
 // Message types for communication between extension and webview
 enum MessageType {
@@ -27,7 +29,14 @@ enum MessageType {
 	REMOVE_CODE_REFERENCE = 'removeCodeReference',
 	GET_WORKSPACE_CONTEXT = 'getWorkspaceContext',
 	WORKSPACE_CONTEXT = 'workspaceContext',
-	CHAT_RESPONSE = 'chatResponse'
+	CHAT_RESPONSE = 'chatResponse',
+	SESSIONS_LIST = 'sessionsList',
+	SESSION_LOADED = 'sessionLoaded',
+	SWITCH_SESSION = 'switchSession',
+	CREATE_SESSION = 'createSession',
+	RENAME_SESSION = 'renameSession',
+	DELETE_SESSION = 'deleteSession',
+	GET_SESSIONS = 'getSessions'
 }
 
 // Interface for messages sent between extension and webview
@@ -47,13 +56,15 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 	private readonly _chatProcessor: ChatProcessor;
 	private readonly _codeReferenceManager: CodeReferenceManager;
 	private readonly _workspaceContextProvider: WorkspaceContextProvider;
+	private readonly _sessionManager: SessionManager;
 
-	constructor(extensionUri: vscode.Uri, serverManager: ServerManager, chatProcessor: ChatProcessor) {
+	constructor(extensionUri: vscode.Uri, serverManager: ServerManager, chatProcessor: ChatProcessor, sessionManager: SessionManager) {
 		this._extensionUri = extensionUri;
 		this._serverManager = serverManager;
 		this._chatProcessor = chatProcessor;
 		this._codeReferenceManager = CodeReferenceManager.getInstance();
 		this._workspaceContextProvider = WorkspaceContextProvider.getInstance();
+		this._sessionManager = sessionManager;
 	}
 
 	resolveWebviewView(
@@ -142,7 +153,8 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 						await this._chatProcessor.sendMessage(
 							message.text,
 							message.codeReferences,
-							message.messageId
+							message.messageId,
+							message.sessionId || this._sessionManager.getCurrentSessionId()
 						);
 					} catch (error) {
 						console.error('Error sending message to chat processor:', error);
@@ -160,6 +172,242 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 
 			case MessageType.GET_WORKSPACE_CONTEXT:
 				this._sendWorkspaceContext();
+				break;
+
+			case MessageType.GET_SESSIONS:
+				try {
+					const sessions = await this._sessionManager.fetchSessions();
+					this._sendMessageToWebview({
+						command: MessageType.SESSIONS_LIST,
+						sessions
+					});
+				} catch (error) {
+					console.error('Error fetching sessions:', error);
+					this._sendMessageToWebview({
+						command: MessageType.ERROR,
+						error: 'Failed to fetch sessions'
+					});
+				}
+				break;
+
+			case MessageType.SWITCH_SESSION:
+				try {
+					const success = await this._sessionManager.switchSession(message.sessionId);
+					if (success) {
+						const session = this._sessionManager.getCurrentSession();
+						if (session) {
+							this._sendMessageToWebview({
+								command: MessageType.SESSION_LOADED,
+								sessionId: session.session_id,
+								messages: session.messages
+							});
+						}
+					} else {
+						this._sendMessageToWebview({
+							command: MessageType.ERROR,
+							error: 'Failed to switch session'
+						});
+					}
+				} catch (error) {
+					console.error('Error switching session:', error);
+					this._sendMessageToWebview({
+						command: MessageType.ERROR,
+						error: 'Failed to switch session'
+					});
+				}
+				break;
+
+			case MessageType.CREATE_SESSION:
+				try {
+					const workspaceDirectory = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+					if (!workspaceDirectory) {
+						this._sendMessageToWebview({
+							command: MessageType.ERROR,
+							error: 'No workspace folder found'
+						});
+						return;
+					}
+
+					const sessionId = await this._sessionManager.createSession(
+						workspaceDirectory,
+						message.description
+					);
+
+					if (sessionId) {
+						// Get the session data to send to the webview
+						const session = this._sessionManager.getCurrentSession();
+						if (session) {
+							this._sendMessageToWebview({
+								command: MessageType.SESSION_LOADED,
+								sessionId: session.session_id,
+								messages: session.messages
+							});
+
+							// Also send the updated session list
+							this._sendMessageToWebview({
+								command: MessageType.SESSIONS_LIST,
+								sessions: this._sessionManager.getSessions()
+							});
+						}
+					} else {
+						this._sendMessageToWebview({
+							command: MessageType.ERROR,
+							error: 'Failed to create session'
+						});
+					}
+				} catch (error) {
+					console.error('Error creating session:', error);
+					this._sendMessageToWebview({
+						command: MessageType.ERROR,
+						error: 'Failed to create session'
+					});
+				}
+				break;
+
+			case MessageType.RENAME_SESSION:
+				try {
+					// Get current session or let user pick one
+					let sessionId = this._sessionManager.getCurrentSessionId();
+					let sessionDescription = '';
+
+					if (!sessionId) {
+						// Fetch available sessions
+						const sessions = await this._sessionManager.fetchSessions();
+
+						if (sessions.length === 0) {
+							vscode.window.showInformationMessage('No sessions available to rename.');
+							return;
+						}
+
+						// Create quick pick items from session list
+						const sessionItems = sessions.map(session => ({
+							label: session.metadata.description || `Session ${session.id}`,
+							description: new Date(session.modified).toLocaleString(),
+							detail: `${session.metadata.message_count} messages`,
+							id: session.id
+						}));
+
+						// Show quick pick menu
+						const selectedItem = await vscode.window.showQuickPick(sessionItems, {
+							placeHolder: 'Select a session to rename'
+						});
+
+						if (!selectedItem) {
+							return; // User cancelled
+						}
+
+						sessionId = selectedItem.id;
+						sessionDescription = selectedItem.label;
+					} else {
+						// Get current session description
+						const currentSession = this._sessionManager.getCurrentSession();
+						if (currentSession) {
+							sessionDescription = currentSession.metadata.description;
+						}
+					}
+
+					// Get new description from user
+					const newDescription = await vscode.window.showInputBox({
+						placeHolder: 'Enter a new description for the session',
+						prompt: 'This helps identify your session later',
+						value: sessionDescription
+					});
+
+					if (newDescription !== undefined && sessionId) { // User didn't cancel
+						const apiClient = this._serverManager.getApiClient();
+						if (apiClient) {
+							const result = await apiClient.renameSession(sessionId, newDescription);
+							if (result) {
+								vscode.window.showInformationMessage(`Renamed session to: ${newDescription}`);
+
+								// Refresh sessions and notify webview
+								await this._sessionManager.fetchSessions();
+								this._sendMessageToWebview({
+									command: MessageType.SESSIONS_LIST,
+									sessions: this._sessionManager.getSessions()
+								});
+							} else {
+								vscode.window.showErrorMessage('Failed to rename session');
+							}
+						}
+					}
+				} catch (error) {
+					console.error('Error renaming session:', error);
+					vscode.window.showErrorMessage('Failed to rename session');
+				}
+				break;
+
+			case MessageType.DELETE_SESSION:
+				try {
+					// Fetch available sessions
+					const sessions = await this._sessionManager.fetchSessions();
+
+					if (sessions.length === 0) {
+						vscode.window.showInformationMessage('No sessions available to delete.');
+						return;
+					}
+
+					// Create quick pick items from session list
+					const sessionItems = sessions.map(session => ({
+						label: session.metadata.description || `Session ${session.id}`,
+						description: new Date(session.modified).toLocaleString(),
+						detail: `${session.metadata.message_count} messages`,
+						id: session.id
+					}));
+
+					// Show quick pick menu
+					const selectedItem = await vscode.window.showQuickPick(sessionItems, {
+						placeHolder: 'Select a session to delete'
+					});
+
+					if (!selectedItem) {
+						return; // User cancelled
+					}
+
+					// Confirm deletion
+					const confirmed = await vscode.window.showWarningMessage(
+						`Are you sure you want to delete "${selectedItem.label}"?`,
+						{ modal: true },
+						'Delete'
+					);
+
+					if (confirmed === 'Delete') {
+						const apiClient = this._serverManager.getApiClient();
+						if (apiClient) {
+							const result = await apiClient.deleteSession(selectedItem.id);
+							if (result) {
+								vscode.window.showInformationMessage(`Deleted session: ${selectedItem.label}`);
+
+								// If we deleted the current session, switch to a new one
+								if (selectedItem.id === this._sessionManager.getCurrentSessionId()) {
+									// Create a new session or switch to another one
+									if (sessions.length > 1) {
+										// Find a different session to switch to
+										const differentSession = sessions.find(s => s.id !== selectedItem.id);
+										if (differentSession) {
+											await this._sessionManager.switchSession(differentSession.id);
+										}
+									} else {
+										// Create a new session if this was the only one
+										vscode.commands.executeCommand('goose.createSession');
+									}
+								}
+
+								// Refresh sessions and notify webview
+								await this._sessionManager.fetchSessions();
+								this._sendMessageToWebview({
+									command: MessageType.SESSIONS_LIST,
+									sessions: this._sessionManager.getSessions()
+								});
+							} else {
+								vscode.window.showErrorMessage('Failed to delete session');
+							}
+						}
+					}
+				} catch (error) {
+					console.error('Error deleting session:', error);
+					vscode.window.showErrorMessage('Failed to delete session');
+				}
 				break;
 
 			default:
@@ -293,18 +541,25 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	console.log('Activating Goose extension');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	console.log('Congratulations, your extension "goose-vscode" is now active!');
-
-	// Create server manager, chat processor, and code reference manager
+	// Create server manager
 	const serverManager = new ServerManager(context);
+
+	// Create chat processor
 	const chatProcessor = new ChatProcessor(serverManager);
-	const codeReferenceManager = CodeReferenceManager.getInstance();
+
+	// Create session manager
+	const sessionManager = new SessionManager(serverManager);
+
+	// Connect chat processor to session manager
+	chatProcessor.setSessionManager(sessionManager);
+
+	// Create workspace context provider
 	const workspaceContextProvider = WorkspaceContextProvider.getInstance();
 
 	// Create the provider before starting the server
-	const provider = new GooseViewProvider(context.extensionUri, serverManager, chatProcessor);
+	const provider = new GooseViewProvider(context.extensionUri, serverManager, chatProcessor, sessionManager);
 
 	// Register the Goose View Provider
 	const viewRegistration = vscode.window.registerWebviewViewProvider(
@@ -391,7 +646,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Command to explain selected code
 	const explainCodeDisposable = vscode.commands.registerCommand('goose.explainCode', () => {
-		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		const codeReference = CodeReferenceManager.getInstance().getCodeReferenceFromSelection();
 		if (codeReference) {
 			provider.addCodeReference();
 			// Pre-populate with an explain question
@@ -407,7 +662,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Command to generate tests for selected code
 	const generateTestsDisposable = vscode.commands.registerCommand('goose.generateTests', () => {
-		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		const codeReference = CodeReferenceManager.getInstance().getCodeReferenceFromSelection();
 		if (codeReference) {
 			provider.addCodeReference();
 			// Pre-populate with a generate tests question
@@ -423,7 +678,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Command to optimize selected code
 	const optimizeCodeDisposable = vscode.commands.registerCommand('goose.optimizeCode', () => {
-		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		const codeReference = CodeReferenceManager.getInstance().getCodeReferenceFromSelection();
 		if (codeReference) {
 			provider.addCodeReference();
 			// Pre-populate with an optimize question
@@ -439,7 +694,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Command to fix issues in selected code
 	const fixIssuesDisposable = vscode.commands.registerCommand('goose.fixIssues', () => {
-		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		const codeReference = CodeReferenceManager.getInstance().getCodeReferenceFromSelection();
 		if (codeReference) {
 			provider.addCodeReference();
 			// Pre-populate with a fix issues question
@@ -455,7 +710,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Command to document selected code
 	const documentCodeDisposable = vscode.commands.registerCommand('goose.documentCode', () => {
-		const codeReference = codeReferenceManager.getCodeReferenceFromSelection();
+		const codeReference = CodeReferenceManager.getInstance().getCodeReferenceFromSelection();
 		if (codeReference) {
 			provider.addCodeReference();
 			// Pre-populate with a document question
@@ -474,6 +729,266 @@ export function activate(context: vscode.ExtensionContext) {
 		provider.addCurrentDiagnostics();
 	});
 
+	// Register session management commands
+	const listSessionsDisposable = vscode.commands.registerCommand('goose.listSessions', async () => {
+		try {
+			const sessions = await sessionManager.fetchSessions();
+			if (provider) {
+				provider.sendMessageToWebview({
+					command: MessageType.SESSIONS_LIST,
+					sessions
+				});
+			}
+		} catch (error) {
+			console.error('Error listing sessions:', error);
+			vscode.window.showErrorMessage('Failed to list sessions');
+		}
+	});
+
+	const switchSessionDisposable = vscode.commands.registerCommand('goose.switchSession', async () => {
+		try {
+			// Fetch available sessions
+			const sessions = await sessionManager.fetchSessions();
+
+			if (sessions.length === 0) {
+				vscode.window.showInformationMessage('No sessions available. Creating a new session.');
+				vscode.commands.executeCommand('goose.createSession');
+				return;
+			}
+
+			// Create quick pick items from session list
+			const sessionItems = sessions.map(session => ({
+				label: session.metadata.description || `Session ${session.id}`,
+				description: new Date(session.modified).toLocaleString(),
+				detail: `${session.metadata.message_count} messages`,
+				id: session.id
+			}));
+
+			// Show quick pick menu
+			const selectedItem = await vscode.window.showQuickPick(sessionItems, {
+				placeHolder: 'Select a session to switch to'
+			});
+
+			if (selectedItem) {
+				const success = await sessionManager.switchSession(selectedItem.id);
+				if (success) {
+					vscode.window.showInformationMessage(`Switched to session: ${selectedItem.label}`);
+
+					// Get the session data to send to the webview
+					const session = sessionManager.getCurrentSession();
+					if (session && provider) {
+						provider.sendMessageToWebview({
+							command: MessageType.SESSION_LOADED,
+							sessionId: session.session_id,
+							messages: session.messages
+						});
+					}
+				} else {
+					vscode.window.showErrorMessage('Failed to switch to the selected session');
+				}
+			}
+		} catch (error) {
+			console.error('Error switching session:', error);
+			vscode.window.showErrorMessage('Failed to switch session');
+		}
+	});
+
+	const createSessionDisposable = vscode.commands.registerCommand('goose.createSession', async () => {
+		try {
+			// Get workspace directory
+			const workspaceDirectory = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+			if (!workspaceDirectory) {
+				vscode.window.showErrorMessage('No workspace folder found. Please open a folder first.');
+				return;
+			}
+
+			// Get description from user
+			const description = await vscode.window.showInputBox({
+				placeHolder: 'Enter a description for the new session',
+				prompt: 'This helps identify your session later',
+				value: `Session ${new Date().toLocaleString()}`
+			});
+
+			if (description !== undefined) { // User didn't cancel
+				const sessionId = await sessionManager.createSession(workspaceDirectory, description);
+				if (sessionId) {
+					vscode.window.showInformationMessage(`Created new session: ${description}`);
+
+					// Get the session data to send to the webview
+					const session = sessionManager.getCurrentSession();
+					if (session && provider) {
+						provider.sendMessageToWebview({
+							command: MessageType.SESSION_LOADED,
+							sessionId: session.session_id,
+							messages: session.messages
+						});
+
+						// Also send the updated session list
+						provider.sendMessageToWebview({
+							command: MessageType.SESSIONS_LIST,
+							sessions: sessionManager.getSessions()
+						});
+					}
+				} else {
+					vscode.window.showErrorMessage('Failed to create new session');
+				}
+			}
+		} catch (error) {
+			console.error('Error creating session:', error);
+			vscode.window.showErrorMessage('Failed to create new session');
+		}
+	});
+
+	const renameSessionDisposable = vscode.commands.registerCommand('goose.renameSession', async () => {
+		try {
+			// Get current session or let user pick one
+			let sessionId = sessionManager.getCurrentSessionId();
+			let sessionDescription = '';
+
+			if (!sessionId) {
+				// Fetch available sessions
+				const sessions = await sessionManager.fetchSessions();
+
+				if (sessions.length === 0) {
+					vscode.window.showInformationMessage('No sessions available to rename.');
+					return;
+				}
+
+				// Create quick pick items from session list
+				const sessionItems = sessions.map(session => ({
+					label: session.metadata.description || `Session ${session.id}`,
+					description: new Date(session.modified).toLocaleString(),
+					detail: `${session.metadata.message_count} messages`,
+					id: session.id
+				}));
+
+				// Show quick pick menu
+				const selectedItem = await vscode.window.showQuickPick(sessionItems, {
+					placeHolder: 'Select a session to rename'
+				});
+
+				if (!selectedItem) {
+					return; // User cancelled
+				}
+
+				sessionId = selectedItem.id;
+				sessionDescription = selectedItem.label;
+			} else {
+				// Get current session description
+				const currentSession = sessionManager.getCurrentSession();
+				if (currentSession) {
+					sessionDescription = currentSession.metadata.description;
+				}
+			}
+
+			// Get new description from user
+			const newDescription = await vscode.window.showInputBox({
+				placeHolder: 'Enter a new description for the session',
+				prompt: 'This helps identify your session later',
+				value: sessionDescription
+			});
+
+			if (newDescription !== undefined && sessionId) { // User didn't cancel
+				const apiClient = serverManager.getApiClient();
+				if (apiClient) {
+					const result = await apiClient.renameSession(sessionId, newDescription);
+					if (result) {
+						vscode.window.showInformationMessage(`Renamed session to: ${newDescription}`);
+
+						// Refresh sessions and notify webview
+						await sessionManager.fetchSessions();
+						if (provider) {
+							provider.sendMessageToWebview({
+								command: MessageType.SESSIONS_LIST,
+								sessions: sessionManager.getSessions()
+							});
+						}
+					} else {
+						vscode.window.showErrorMessage('Failed to rename session');
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Error renaming session:', error);
+			vscode.window.showErrorMessage('Failed to rename session');
+		}
+	});
+
+	const deleteSessionDisposable = vscode.commands.registerCommand('goose.deleteSession', async () => {
+		try {
+			// Fetch available sessions
+			const sessions = await sessionManager.fetchSessions();
+
+			if (sessions.length === 0) {
+				vscode.window.showInformationMessage('No sessions available to delete.');
+				return;
+			}
+
+			// Create quick pick items from session list
+			const sessionItems = sessions.map(session => ({
+				label: session.metadata.description || `Session ${session.id}`,
+				description: new Date(session.modified).toLocaleString(),
+				detail: `${session.metadata.message_count} messages`,
+				id: session.id
+			}));
+
+			// Show quick pick menu
+			const selectedItem = await vscode.window.showQuickPick(sessionItems, {
+				placeHolder: 'Select a session to delete'
+			});
+
+			if (!selectedItem) {
+				return; // User cancelled
+			}
+
+			// Confirm deletion
+			const confirmed = await vscode.window.showWarningMessage(
+				`Are you sure you want to delete "${selectedItem.label}"?`,
+				{ modal: true },
+				'Delete'
+			);
+
+			if (confirmed === 'Delete') {
+				const apiClient = serverManager.getApiClient();
+				if (apiClient) {
+					const result = await apiClient.deleteSession(selectedItem.id);
+					if (result) {
+						vscode.window.showInformationMessage(`Deleted session: ${selectedItem.label}`);
+
+						// If we deleted the current session, switch to a new one
+						if (selectedItem.id === sessionManager.getCurrentSessionId()) {
+							// Create a new session or switch to another one
+							if (sessions.length > 1) {
+								// Find a different session to switch to
+								const differentSession = sessions.find(s => s.id !== selectedItem.id);
+								if (differentSession) {
+									await sessionManager.switchSession(differentSession.id);
+								}
+							} else {
+								// Create a new session if this was the only one
+								vscode.commands.executeCommand('goose.createSession');
+							}
+						}
+
+						// Refresh sessions and notify webview
+						await sessionManager.fetchSessions();
+						if (provider) {
+							provider.sendMessageToWebview({
+								command: MessageType.SESSIONS_LIST,
+								sessions: sessionManager.getSessions()
+							});
+						}
+					} else {
+						vscode.window.showErrorMessage('Failed to delete session');
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Error deleting session:', error);
+			vscode.window.showErrorMessage('Failed to delete session');
+		}
+	});
+
 	context.subscriptions.push(
 		viewRegistration,
 		helloDisposable,
@@ -487,7 +1002,12 @@ export function activate(context: vscode.ExtensionContext) {
 		fixIssuesDisposable,
 		documentCodeDisposable,
 		getDiagnosticsDisposable,
-		codeActionRegistration
+		codeActionRegistration,
+		listSessionsDisposable,
+		switchSessionDisposable,
+		createSessionDisposable,
+		renameSessionDisposable,
+		deleteSessionDisposable
 	);
 }
 

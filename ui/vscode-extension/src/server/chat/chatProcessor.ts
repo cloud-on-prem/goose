@@ -3,6 +3,7 @@ import { TextDecoder } from 'util';
 import { ServerManager } from '../serverManager';
 import { Message, createUserMessage } from '../../shared/types';
 import * as vscode from 'vscode';
+import { SessionManager } from './sessionManager';
 
 /**
  * Events emitted by the chat processor
@@ -30,6 +31,7 @@ export class ChatProcessor {
     private abortController: AbortController | null = null;
     private currentMessages: Message[] = [];
     private shouldStop: boolean = false;
+    private sessionManager: SessionManager | null = null;
 
     constructor(serverManager: ServerManager) {
         this.serverManager = serverManager;
@@ -37,10 +39,30 @@ export class ChatProcessor {
     }
 
     /**
+     * Set the session manager
+     */
+    public setSessionManager(sessionManager: SessionManager): void {
+        this.sessionManager = sessionManager;
+    }
+
+    /**
      * Send a message to the Goose AI
      */
-    public async sendMessage(text: string, codeReferences?: any[], messageId?: string): Promise<void> {
+    public async sendMessage(text: string, codeReferences?: any[], messageId?: string, sessionId?: string): Promise<void> {
         console.log("chatProcessor.sendMessage called with text:", text);
+
+        // Get the session ID (from parameter or current session)
+        let effectiveSessionId: string | undefined = sessionId;
+
+        // Only try to get current session if no sessionId was provided
+        if (!effectiveSessionId && this.sessionManager) {
+            const currentSessionId = this.sessionManager.getCurrentSessionId();
+            if (currentSessionId) {
+                effectiveSessionId = currentSessionId;
+            }
+        }
+
+        console.log("Using session ID:", effectiveSessionId || "none (creating new session)");
 
         // Format message with code references if provided
         let formattedText = text;
@@ -77,8 +99,13 @@ export class ChatProcessor {
         try {
             // Send the message to the server
             console.log("Sending chat request to server...");
-            const response = await this.sendChatRequest();
+            const response = await this.sendChatRequest(effectiveSessionId);
             console.log("Got response from server, status:", response.status);
+
+            // If this was a new session, load the session info after sending the first message
+            if (!effectiveSessionId && this.sessionManager) {
+                await this.sessionManager.fetchSessions();
+            }
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -161,7 +188,7 @@ export class ChatProcessor {
                             if (line.startsWith('data:')) {
                                 try {
                                     const jsonStr = line.substring(5).trim();
-                                    if (jsonStr === '[DONE]') continue;
+                                    if (jsonStr === '[DONE]') {continue;}
 
                                     const data = JSON.parse(jsonStr);
 
@@ -316,25 +343,24 @@ export class ChatProcessor {
     /**
      * Send a chat request to the server
      */
-    private async sendChatRequest(): Promise<Response> {
+    private async sendChatRequest(sessionId?: string): Promise<Response> {
+        console.log("Creating new AbortController for chat request");
         this.abortController = new AbortController();
 
-        let workingDir = process.cwd();
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders && workspaceFolders.length > 0) {
-            workingDir = workspaceFolders[0].uri.fsPath;
-        }
+        // Get workspace directory to use as working directory
+        const workspaceDirectory = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
 
+        // Get API client from server manager
         const apiClient = this.serverManager.getApiClient();
         if (!apiClient) {
-            throw new Error('API client is not available');
+            throw new Error('API client not available');
         }
 
         return await apiClient.streamChatResponse(
             this.currentMessages,
             this.abortController,
-            undefined,
-            workingDir
+            sessionId,
+            workspaceDirectory
         );
     }
 
@@ -364,8 +390,8 @@ export class ChatProcessor {
             if (Array.isArray(text.content)) {
                 const combinedContent = text.content
                     .map((part: any) => {
-                        if (typeof part === 'string') return part;
-                        if (part && typeof part.text === 'string') return part.text;
+                        if (typeof part === 'string') {return part;}
+                        if (part && typeof part.text === 'string') {return part.text;}
                         return '';
                     })
                     .filter(Boolean)

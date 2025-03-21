@@ -271,6 +271,51 @@ export class ApiClient {
     }
 
     /**
+     * Create a new session
+     * @param workingDir The working directory for the session
+     * @param description Optional description for the session
+     * @returns The created session ID
+     */
+    public async createSession(workingDir: string, description?: string): Promise<any> {
+        const response = await this.request('/sessions/new', {
+            method: 'POST',
+            body: JSON.stringify({
+                working_dir: workingDir,
+                description: description || `Session ${new Date().toLocaleString()}`
+            }),
+        });
+        return await response.json();
+    }
+
+    /**
+     * Rename a session
+     * @param sessionId The session ID to rename
+     * @param description The new description for the session
+     * @returns The updated session
+     */
+    public async renameSession(sessionId: string, description: string): Promise<any> {
+        const response = await this.request(`/sessions/${sessionId}/rename`, {
+            method: 'POST',
+            body: JSON.stringify({
+                description
+            }),
+        });
+        return await response.json();
+    }
+
+    /**
+     * Delete a session
+     * @param sessionId The session ID to delete
+     * @returns Success status
+     */
+    public async deleteSession(sessionId: string): Promise<any> {
+        const response = await this.request(`/sessions/${sessionId}`, {
+            method: 'DELETE',
+        });
+        return await response.json();
+    }
+
+    /**
      * Check the server status
      * @returns True if the server is ready
      */
