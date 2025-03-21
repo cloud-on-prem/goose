@@ -152,39 +152,50 @@ export class SessionManager {
      */
     public async createSession(workingDir: string, description?: string): Promise<string | null> {
         try {
-            const apiClient = this.serverManager.getApiClient();
-            if (!apiClient || !this.serverManager.isReady()) {
-                console.error('Cannot create session: Server not ready');
-                this.emit(SessionEvents.ERROR, new Error('Server not ready'));
-                return null;
-            }
+            // Create a local session without API call
+            const sessionId = `${new Date().toISOString().split('T')[0].replace(/-/g, '')}${new Date().toISOString().split('T')[1].split('.')[0].replace(/:/g, '')}`;
+            const sessionTitle = description || `Session ${new Date().toLocaleString()}`;
 
-            try {
-                // Create a new session on the server
-                const response = await apiClient.request('/sessions', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        working_dir: workingDir,
-                        title: description || `Session ${new Date().toLocaleString()}`
-                    })
-                });
+            console.log(`Creating local session with ID: ${sessionId}`);
 
-                const sessionData = await response.json();
-                const sessionId = sessionData.id;
+            // Create a new session object
+            const newSession: Session = {
+                session_id: sessionId,
+                metadata: {
+                    working_dir: workingDir,
+                    title: sessionTitle,
+                    description: sessionTitle,
+                    message_count: 0,
+                    total_tokens: 0
+                },
+                messages: []
+            };
 
-                if (!sessionId) {
-                    throw new Error('Failed to create session: No session ID returned');
+            // Create session metadata
+            const newSessionMetadata: SessionMetadata = {
+                id: sessionId,
+                path: `${workingDir}/${sessionId}`,
+                modified: new Date().toISOString(),
+                metadata: {
+                    working_dir: workingDir,
+                    title: sessionTitle,
+                    description: sessionTitle,
+                    message_count: 0,
+                    total_tokens: 0
                 }
+            };
 
-                // Load the newly created session
-                await this.loadSession(sessionId);
+            // Update local state
+            this.sessions.push(newSessionMetadata);
+            this.currentSessionId = sessionId;
+            this.currentSession = newSession;
 
-                return sessionId;
-            } catch (error) {
-                console.error('Error creating session via API:', error);
-                this.emit(SessionEvents.ERROR, error);
-                return null;
-            }
+            // Emit events
+            this.emit(SessionEvents.SESSION_CREATED, newSession);
+            this.emit(SessionEvents.SESSION_LOADED, newSession);
+            this.emit(SessionEvents.SESSIONS_LOADED, this.sessions);
+
+            return sessionId;
         } catch (error) {
             console.error('Error creating session:', error);
             this.emit(SessionEvents.ERROR, error);
