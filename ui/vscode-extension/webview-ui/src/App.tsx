@@ -598,19 +598,17 @@ const App: React.FC = () => {
     // Code reference chip component
     const CodeReferenceChip = ({ codeRef, onRemove }: { codeRef: CodeReference, onRemove: () => void }) => (
         <div className="code-reference-chip">
-            <span style={{ marginRight: '4px' }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                    <path d="M9.5 1.1l3.4 3.5.1.4v2h-1V5.5l-2.5.1-1-.1-.3-.3-.2-.7V2H4v12h12V7h1v7.5l-.1.5-.5.1H3.1l-.5-.1-.1-.5V1.2l.1-.5.5-.2h6l.4.1zM8 2v2.3l.2.2.3.1.5-.1.1-.1.1-.2V2H8zm-3.9 13H1v-1h3.1v1z" />
-                </svg>
+            <span style={{ marginRight: '6px', display: 'flex', alignItems: 'center' }}>
+                <i className="codicon codicon-file-code"></i>
             </span>
-            <span>{codeRef.fileName}:{codeRef.startLine}-{codeRef.endLine}</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}>{codeRef.fileName}:{codeRef.startLine}-{codeRef.endLine}</span>
             <button
                 onClick={onRemove}
                 style={{
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '0 0 0 4px',
+                    padding: '0 0 0 6px',
                     color: 'var(--vscode-editor-foreground)',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -619,9 +617,7 @@ const App: React.FC = () => {
                 onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
                 onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}
             >
-                <svg width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.707.708L7.293 8l-3.646 3.646.707.708L8 8.707z" />
-                </svg>
+                <i className="codicon codicon-close"></i>
             </button>
         </div>
     );

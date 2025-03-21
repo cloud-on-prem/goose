@@ -746,7 +746,7 @@
     background-color: var(--vscode-editor-inactiveSelectionBackground);
     color: var(--vscode-editor-foreground);
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
     padding: 2px 8px;
     margin: 0;
     font-size: 12px;
@@ -754,6 +754,13 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    box-shadow: none;
+    outline: none;
+    border-bottom: none;
+}
+
+.code-reference-chip svg {
+    opacity: 0.8;
 }
 
 .input-wrapper {
