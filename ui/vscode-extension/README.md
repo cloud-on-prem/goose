@@ -123,6 +123,7 @@ Refer to the GitHub issues page for any known issues.
   - [x] Implement code action suggestions for diagnostics
   - [x] Add workspace context information panel
   - [x] Integrate with diagnostics for error fixing
+  - [x] Use full file paths for code references instead of just file names
 
 ## License
 

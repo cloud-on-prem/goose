@@ -50,7 +50,7 @@ export class ChatProcessor {
                 if (formattedText.length > 0) {
                     formattedText += '\n\n';
                 }
-                formattedText += `From ${reference.fileName}:${reference.startLine}-${reference.endLine}`;
+                formattedText += `From ${reference.filePath}:${reference.startLine}-${reference.endLine}`;
             }
         }
 

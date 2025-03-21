@@ -61,7 +61,7 @@ export class CodeReferenceManager {
      * Formats a code reference for display in the chat
      */
     public formatCodeReferenceForChat(codeRef: CodeReference): string {
-        return `From ${codeRef.fileName}:${codeRef.startLine}-${codeRef.endLine}:\n\`\`\`${codeRef.languageId}\n${codeRef.selectedText}\n\`\`\``;
+        return `From ${codeRef.filePath}:${codeRef.startLine}-${codeRef.endLine}:\n\`\`\`${codeRef.languageId}\n${codeRef.selectedText}\n\`\`\``;
     }
 
     /**
