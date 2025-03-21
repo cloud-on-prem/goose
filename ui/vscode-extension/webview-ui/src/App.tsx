@@ -206,15 +206,18 @@ const App: React.FC = () => {
 
                     // If there's intermediate text, add it as the final message
                     if (intermediateText && currentMessageId) {
+                        const currentTimestamp = Date.now();
                         const finalMessage: Message = {
                             id: currentMessageId,
                             role: 'assistant',
-                            created: Date.now(),
+                            created: currentTimestamp, // Always use current timestamp
                             content: [{
                                 type: 'text',
                                 text: intermediateText
                             }]
                         };
+
+                        console.log(`Setting final message with timestamp: ${new Date(currentTimestamp).toLocaleTimeString()}`);
 
                         setMessages(prevMessages => {
                             // Check if this message already exists in our state
@@ -283,7 +286,22 @@ const App: React.FC = () => {
                         // If messages are provided, replace the current messages with them
                         if (message.messages && Array.isArray(message.messages)) {
                             console.log('Setting messages from loaded session');
-                            setMessages(message.messages);
+
+                            // Normalize timestamps for all loaded messages
+                            const normalizedMessages = message.messages.map((msg, index) => {
+                                // Create a copy of the message
+                                const normalizedMsg = { ...msg };
+
+                                // Calculate a timestamp that's 1 minute earlier for each message going backward
+                                // This preserves the conversation order but with current times
+                                const now = Date.now();
+                                normalizedMsg.created = now - (message.messages.length - index) * 60000;
+
+                                return normalizedMsg;
+                            });
+
+                            // Set the normalized messages
+                            setMessages(normalizedMessages);
                         }
                     }
                     break;
@@ -917,11 +935,19 @@ const App: React.FC = () => {
                                             {isUser ? 'You' : 'Goose'}
                                         </div>
                                         <div className="vscode-message-group-time">
-                                            {new Date(message.created).toLocaleTimeString([], {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: false
-                                            })}
+                                            {(() => {
+                                                // Ensure consistent timestamp handling
+                                                const timestamp = typeof message.created === 'number' ?
+                                                    message.created : // If it's already a number, use it
+                                                    new Date(message.created).getTime(); // Otherwise convert string to number
+
+                                                return new Date(timestamp).toLocaleTimeString(navigator.language, {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    hour12: false,
+                                                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 )}

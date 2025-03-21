@@ -128,11 +128,12 @@ export class ChatProcessor {
             console.log("Created reader for response body");
 
             // Create a new message object
-            console.log("Creating initial AI message");
+            console.log("Creating initial AI message with current timestamp");
+            const currentTimestamp = Date.now();
             const aiMessage: Message = {
                 id: aiMessageId,
                 role: 'assistant',
-                created: Date.now(),
+                created: currentTimestamp, // Use the current time for consistency
                 content: [{
                     type: 'text',
                     text: ''
@@ -188,7 +189,7 @@ export class ChatProcessor {
                             if (line.startsWith('data:')) {
                                 try {
                                     const jsonStr = line.substring(5).trim();
-                                    if (jsonStr === '[DONE]') {continue;}
+                                    if (jsonStr === '[DONE]') { continue; }
 
                                     const data = JSON.parse(jsonStr);
 
@@ -214,6 +215,10 @@ export class ChatProcessor {
                             // Update the message ID to match our expected ID pattern
                             lastAssistantMessage.id = aiMessage.id;
 
+                            // IMPORTANT: Always use the CURRENT timestamp for consistency
+                            // This ensures timestamps reflect when messages were actually received
+                            lastAssistantMessage.created = Date.now();
+
                             // Send the extracted message directly
                             this.emit(ChatEvents.MESSAGE_RECEIVED, lastAssistantMessage);
                         }
@@ -237,6 +242,7 @@ export class ChatProcessor {
                             if (messageText) {
                                 console.log("Extracted message text from latest data:", messageText);
                                 const updatedMessage = { ...aiMessage };
+                                updatedMessage.created = Date.now(); // Use current timestamp
                                 updatedMessage.content = [{
                                     type: 'text',
                                     text: messageText
@@ -247,6 +253,7 @@ export class ChatProcessor {
                             } else {
                                 // Last resort: use the raw JSON data
                                 const updatedMessage = { ...aiMessage };
+                                updatedMessage.created = Date.now(); // Use current timestamp
                                 updatedMessage.content = [{
                                     type: 'text',
                                     text: JSON.stringify(lastMessageData, null, 2)
@@ -258,6 +265,7 @@ export class ChatProcessor {
                             // Extreme fallback - use raw text
                             console.log("No valid messages found, using raw text");
                             const updatedMessage = { ...aiMessage };
+                            updatedMessage.created = Date.now(); // Use current timestamp
                             updatedMessage.content = [{
                                 type: 'text',
                                 text: fullText
@@ -282,6 +290,7 @@ export class ChatProcessor {
                 } else {
                     // If it's not JSON, just use it as raw text
                     const updatedMessage = { ...aiMessage };
+                    updatedMessage.created = Date.now(); // Use current timestamp
                     updatedMessage.content = [{
                         type: 'text',
                         text: fullText
@@ -309,6 +318,16 @@ export class ChatProcessor {
             this.abortController = null;
         }
         this.shouldStop = false;
+
+        // If there's an active message being generated, finish it with current timestamp
+        if (this.currentMessages.length > 0) {
+            const lastMessage = this.currentMessages[this.currentMessages.length - 1];
+            if (lastMessage.role === 'assistant') {
+                // Update the timestamp to the current time
+                lastMessage.created = Date.now();
+            }
+        }
+
         this.emit(ChatEvents.FINISH, null, 'aborted');
     }
 
@@ -390,8 +409,8 @@ export class ChatProcessor {
             if (Array.isArray(text.content)) {
                 const combinedContent = text.content
                     .map((part: any) => {
-                        if (typeof part === 'string') {return part;}
-                        if (part && typeof part.text === 'string') {return part.text;}
+                        if (typeof part === 'string') { return part; }
+                        if (part && typeof part.text === 'string') { return part.text; }
                         return '';
                     })
                     .filter(Boolean)
