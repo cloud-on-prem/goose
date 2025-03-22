@@ -1,0 +1,44 @@
+.message-list {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 1;
+    padding: 16px;
+    gap: 20px;
+}
+
+.empty-message-list {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 500px;
+    padding: 20px;
+}
+
+.empty-state h2 {
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+}
+
+.empty-state p {
+    color: var(--vscode-descriptionForeground);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.message-group {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.first-in-group {
+    margin-top: 8px;
+}
