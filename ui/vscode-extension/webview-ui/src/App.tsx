@@ -985,75 +985,107 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    messages.map((message, index) => {
-                        const isUser = message.role === 'user';
-                        const messageText = message.content
-                            .filter((item) => item.type === 'text')
-                            .map((item) => item.text)
-                            .join('\n');
+                    // Filter out messages with empty content before mapping
+                    messages
+                        .filter(message => {
+                            // Skip messages with no content array
+                            if (!message.content || !Array.isArray(message.content)) {
+                                return false;
+                            }
 
-                        // Create a group for consecutive messages from the same sender
-                        const prevMessage = index > 0 ? messages[index - 1] : null;
-                        const isFirstInGroup = !prevMessage || prevMessage.role !== message.role;
+                            // Check if message has any non-empty text content
+                            const hasTextContent = message.content.some(item =>
+                                item.type === 'text' && item.text && item.text.trim() !== ''
+                            );
 
-                        return (
-                            <div
-                                key={message.id}
-                                className={`message-group ${isFirstInGroup ? 'first-in-group' : ''}`}
-                            >
-                                {isFirstInGroup && (
-                                    <div className="vscode-message-group-header">
-                                        <div className="vscode-message-group-role">
-                                            {isUser ? 'You' : 'Goose'}
-                                        </div>
-                                        <div className="vscode-message-group-time">
-                                            {(() => {
-                                                // Ensure consistent timestamp handling
-                                                const timestamp = typeof message.created === 'number' ?
-                                                    message.created : // If it's already a number, use it
-                                                    new Date(message.created).getTime(); // Otherwise convert string to number
+                            // Check if message has any non-text content (like tool calls)
+                            const hasNonTextContent = message.content.some(item => item.type !== 'text');
 
-                                                return new Date(timestamp).toLocaleTimeString(navigator.language, {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    hour12: false,
-                                                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                                });
-                                            })()}
-                                        </div>
-                                    </div>
-                                )}
+                            // Keep messages that have either text content or non-text content
+                            return hasTextContent || hasNonTextContent;
+                        })
+                        .map((message, index, filteredMessages) => {
+                            const isUser = message.role === 'user';
+                            const messageText = message.content
+                                .filter((item) => item.type === 'text')
+                                .map((item) => item.text)
+                                .join('\n');
 
+                            // Skip rendering completely empty user messages
+                            if (isUser && (!messageText || messageText.trim() === '')) {
+                                return null;
+                            }
+
+                            // Create a group for consecutive messages from the same sender
+                            // Use filtered message array for prev message reference
+                            const prevMessage = index > 0 ? filteredMessages[index - 1] : null;
+                            const isFirstInGroup = !prevMessage || prevMessage.role !== message.role;
+
+                            return (
                                 <div
-                                    className={`message ${isUser ? 'user' : 'ai'}`}
+                                    key={message.id}
+                                    className={`message-group ${isFirstInGroup ? 'first-in-group' : ''}`}
                                 >
-                                    <div className="message-content">
-                                        {isUser ? (
-                                            <div className="message-text">{messageText}</div>
-                                        ) : (
-                                            <div className="message-text markdown">
-                                                {renderMessageContent(message.content)}
+                                    {isFirstInGroup && (
+                                        <div className="vscode-message-group-header">
+                                            <div className="vscode-message-group-role">
+                                                {isUser ? 'You' : 'Goose'}
                                             </div>
-                                        )}
+                                            <div className="vscode-message-group-time">
+                                                {(() => {
+                                                    // Ensure consistent timestamp handling
+                                                    const timestamp = typeof message.created === 'number' ?
+                                                        message.created : // If it's already a number, use it
+                                                        new Date(message.created).getTime(); // Otherwise convert string to number
 
-                                        <div className="message-actions">
-                                            <button
-                                                className={`copy-button ${copiedMessageId === message.id ? 'copied' : ''}`}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(messageText);
-                                                    setCopiedMessageId(message.id || null);
-                                                    setTimeout(() => setCopiedMessageId(null), 2000);
-                                                }}
-                                                title="Copy message"
-                                            >
-                                                <i className={`codicon ${copiedMessageId === message.id ? 'codicon-check' : 'codicon-copy'}`}></i>
-                                            </button>
+                                                    return new Date(timestamp).toLocaleTimeString(navigator.language, {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        hour12: false,
+                                                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                                    });
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div
+                                        className={`message ${isUser ? 'user' : 'ai'}`}
+                                    >
+                                        <div className="message-content">
+                                            {isUser ? (
+                                                <div className="message-text">
+                                                    <div className="message-role">You</div>
+                                                    {messageText && messageText.trim() !== '' ? (
+                                                        messageText
+                                                    ) : (
+                                                        <i className="empty-content">Empty message</i>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="message-text markdown">
+                                                    {renderMessageContent(message.content)}
+                                                </div>
+                                            )}
+
+                                            <div className="message-actions">
+                                                <button
+                                                    className={`copy-button ${copiedMessageId === message.id ? 'copied' : ''}`}
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(messageText);
+                                                        setCopiedMessageId(message.id || null);
+                                                        setTimeout(() => setCopiedMessageId(null), 2000);
+                                                    }}
+                                                    title="Copy message"
+                                                >
+                                                    <i className={`codicon ${copiedMessageId === message.id ? 'codicon-check' : 'codicon-copy'}`}></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })
+                            );
+                        })
                 )}
 
                 {/* Loading/generating indicator */}

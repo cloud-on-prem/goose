@@ -198,16 +198,32 @@
 
 .message.user {
     background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    border-radius: 4px;
+    border: 1px solid var(--vscode-focusBorder, var(--vscode-button-background));
+    border-radius: 6px;
     margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .message.user .message-text {
-    background-color: var(--vscode-inputOption-activeBackground);
+    background-color: var(--vscode-editor-selectionBackground, var(--vscode-button-secondaryBackground));
     border-radius: 3px;
-    padding: 8px;
+    padding: 10px;
+    color: var(--vscode-editor-foreground);
+    font-weight: 500;
+}
+
+/* Make user message text more visible */
+.message.user .message-content {
+    padding: 12px;
+}
+
+/* Add a visible header to user messages for better contrast */
+.message-role {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--vscode-editorLightBulb-foreground, var(--vscode-button-foreground));
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 4px;
 }
 
 .message.ai {
