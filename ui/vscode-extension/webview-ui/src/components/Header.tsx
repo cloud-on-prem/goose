@@ -16,7 +16,12 @@ export const Header: React.FC<HeaderProps> = ({
     isGenerating
 }) => {
     // Display GENERATING status when isGenerating is true, otherwise show the actual status
-    const displayStatus = isGenerating ? 'GENERATING' : status;
+    let displayStatus = isGenerating ? 'GENERATING' : status;
+
+    // Change "running" to "SERVER CONNECTED" for better clarity
+    if (displayStatus === 'running') {
+        displayStatus = 'SERVER CONNECTED';
+    }
 
     return (
         <div className="vscode-chat-header">
@@ -30,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
                 />
 
                 <div className="vscode-status-container">
-                    <div className={`vscode-status-badge ${displayStatus.toLowerCase()}`}>
+                    <div className={`vscode-status-badge ${status.toLowerCase()}`}>
                         {displayStatus}
                     </div>
                 </div>

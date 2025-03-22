@@ -310,18 +310,12 @@
 }
 
 .message-actions {
-    position: absolute;
-    top: 6px;
-    right: 6px;
     display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
     gap: 4px;
-    opacity: 0;
     transition: opacity 0.2s ease;
-    background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    border-radius: 3px;
-    padding: 2px;
-    z-index: 10;
+    opacity: 0;
 }
 
 .message:hover .message-actions {
@@ -1032,9 +1026,10 @@
     color: var(--vscode-badge-foreground);
 }
 
-.status-running {
-    background-color: var(--vscode-testing-runAction);
-    color: var(--vscode-badge-foreground);
+.status-running,
+.status-server-connected {
+    background-color: var(--vscode-testing-iconPassed);
+    color: var(--vscode-editor-background);
 }
 
 .status-starting {
@@ -1261,6 +1256,21 @@
 
 .copy-button.copied {
     color: var(--vscode-terminal-ansiGreen);
+    animation: copy-success 0.6s ease;
+}
+
+@keyframes copy-success {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 .copy-button .codicon {
