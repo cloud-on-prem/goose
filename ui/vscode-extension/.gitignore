@@ -44,3 +44,4 @@ Thumbs.db
 
 # Debug files
 debug*.log 
+coverage/
