@@ -36,7 +36,18 @@ export default defineConfig({
                 'src/test/',
                 '**/*.d.ts',
                 '**/*.test.{ts,tsx}',
-                'src/vscode.ts'
+                'src/vscode.ts',
+                // Exclude JavaScript files from coverage
+                '**/*.js',
+                'postcss.config.js',
+                'tailwind.config.js',
+                'vite.config.js',
+                'dist/**',
+                'coverage/**'
+            ],
+            include: [
+                'src/**/*.tsx',
+                'src/**/*.ts'
             ],
             all: true
         }

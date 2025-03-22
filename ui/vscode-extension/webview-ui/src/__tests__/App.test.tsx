@@ -1,25 +1,62 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MessageType } from '../test/mocks/types';
-
-// Instead of testing the entire App component which is complex,
-// we'll test key functionality separately in smaller units
 
 // Mock the scrollIntoView method
 Element.prototype.scrollIntoView = vi.fn();
 
 // Mock the VSCode API
 const mockPostMessage = vi.fn();
+const mockGetState = vi.fn().mockReturnValue({ sessions: [], activeSessionId: null });
+const mockSetState = vi.fn();
+
 beforeEach(() => {
     vi.resetAllMocks();
     window.acquireVsCodeApi = vi.fn(() => ({
         postMessage: mockPostMessage,
-        getState: vi.fn(),
-        setState: vi.fn(),
+        getState: mockGetState,
+        setState: mockSetState,
     }));
 });
 
-describe('App Tests', () => {
+// Mock ResizeObserver
+const mockResizeObserver = vi.fn(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+}));
+
+// Mock IntersectionObserver
+const mockIntersectionObserver = vi.fn(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+}));
+
+// Save the original
+const originalAddEventListener = window.addEventListener;
+
+beforeEach(() => {
+    vi.resetAllMocks();
+    window.ResizeObserver = mockResizeObserver;
+    window.IntersectionObserver = mockIntersectionObserver;
+
+    // Mock window.addEventListener to capture message event handlers
+    window.addEventListener = vi.fn((event, handler) => {
+        if (event === 'message') {
+            // Save the handler for later use in tests
+            (window as any).messageHandler = handler;
+        }
+        return originalAddEventListener(event, handler);
+    });
+});
+
+afterEach(() => {
+    // Restore original
+    window.addEventListener = originalAddEventListener;
+});
+
+describe('App Component Tests', () => {
     describe('Basic UI Components', () => {
         // Test placeholder component rendering
         it('can render basic UI components', () => {

@@ -7,6 +7,7 @@ export enum MessageType {
     SERVER_STATUS = 'serverStatus',
     CHAT_MESSAGE = 'chatMessage',
     SEND_CHAT_MESSAGE = 'sendChatMessage',
+    RECEIVE_CHAT_MESSAGE = 'receiveChatMessage',
     AI_MESSAGE = 'aiMessage',
     STOP_GENERATION = 'stopGeneration',
     GENERATION_FINISHED = 'generationFinished',
@@ -22,7 +23,14 @@ export enum MessageType {
     CREATE_SESSION = 'createSession',
     RENAME_SESSION = 'renameSession',
     DELETE_SESSION = 'deleteSession',
-    GET_SESSIONS = 'getSessions'
+    GET_SESSIONS = 'getSessions',
+    // Add streaming message types
+    RECEIVE_STREAM_START = 'receiveStreamStart',
+    RECEIVE_STREAM_CHUNK = 'receiveStreamChunk',
+    RECEIVE_STREAM_END = 'receiveStreamEnd',
+    // Add session update types
+    RECEIVE_MESSAGE_UPDATE = 'receiveMessageUpdate',
+    RECEIVE_SESSIONS_UPDATE = 'receiveSessionsUpdate'
 }
 
 // Content types
@@ -65,6 +73,14 @@ export interface SessionMetadata {
         timestamp: number;
         lastUpdated: number;
     };
+}
+
+// Session interface with messages
+export interface Session {
+    id: string;
+    name: string;
+    messages: Message[];
+    createdAt: number;
 }
 
 // Workspace context interface
