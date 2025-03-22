@@ -23,11 +23,29 @@ suite('Extension Test Suite', () => {
 	test('Commands should be registered during activation', async () => {
 		// Create a mock context object
 		const context: Partial<vscode.ExtensionContext> = {
-			subscriptions: []
+			subscriptions: [],
+			extensionPath: '/test/extension',
+			extensionUri: {} as vscode.Uri,
+			asAbsolutePath: (path: string) => `/test/extension/${path}`,
+			storageUri: undefined,
+			globalState: {
+				get: sinon.stub(),
+				update: sinon.stub(),
+				setKeysForSync: sinon.stub()
+			} as unknown as vscode.Memento & { setKeysForSync(keys: readonly string[]): void },
+			workspaceState: {} as vscode.Memento,
+			secrets: {} as vscode.SecretStorage,
+			extensionMode: vscode.ExtensionMode.Development,
+			globalStorageUri: {} as vscode.Uri,
+			logUri: {} as vscode.Uri,
+			logPath: '/test/extension/logs'
 		};
 
 		// Create a stub for vscode.commands.registerCommand
 		const registerCommandStub = sinon.stub(vscode.commands, 'registerCommand');
+
+		// Stub getBinaryPath to prevent errors when the server tries to start
+		const getBinaryPathStub = sinon.stub(require('../utils/binaryPath'), 'getBinaryPath').returns('/test/bin/goosed');
 
 		// Activate the extension with our mock context
 		myExtension.activate(context as vscode.ExtensionContext);
@@ -49,8 +67,9 @@ suite('Extension Test Suite', () => {
 			'Expected 19 subscriptions to be added to context'
 		);
 
-		// Restore the stub
+		// Restore the stubs
 		registerCommandStub.restore();
+		getBinaryPathStub.restore();
 	});
 
 	// Test WebView message handling - this would typically be in a separate integration test
