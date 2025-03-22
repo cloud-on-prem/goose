@@ -168,7 +168,8 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    margin-bottom: 12px;
+    margin-bottom: 20px;
+    position: relative;
 }
 
 .message-group .message {
@@ -190,25 +191,36 @@
     border-radius: 4px;
     overflow: hidden;
     position: relative;
+    margin: 0 10px;
     margin-bottom: 4px !important;
     overflow: visible !important;
 }
 
 .message.user {
     background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.message.user .message-text {
+    background-color: var(--vscode-inputOption-activeBackground);
+    border-radius: 3px;
+    padding: 8px;
 }
 
 .message.ai {
     background-color: var(--vscode-editor-inactiveSelectionBackground);
+    margin-bottom: 12px;
+    border-radius: 4px;
 }
 
 .message-content {
-    padding: 10px 12px;
-    width: 100% !important;
-    max-width: 100% !important;
     display: flex;
     flex-direction: column;
-    overflow-wrap: break-word !important;
+    padding: 10px;
+    position: relative;
 }
 
 .message-text {
@@ -282,11 +294,22 @@
 }
 
 .message-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
     display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    padding: 4px 8px;
-    position: relative;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 2px;
+    z-index: 10;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
 }
 
 /* Message header (shows the role) */
@@ -1445,13 +1468,5 @@
 .message-container {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0 0 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    height: 0;
-    /* Critical for proper flexbox scrolling */
-    min-height: 0;
-    /* Critical for proper flexbox scrolling */
+    padding: 16px;
 }
