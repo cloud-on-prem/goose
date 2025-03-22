@@ -1074,7 +1074,7 @@ const App: React.FC = () => {
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(messageText);
                                                         setCopiedMessageId(message.id || null);
-                                                        setTimeout(() => setCopiedMessageId(null), 2000);
+                                                        setTimeout(() => setCopiedMessageId(null), 600);
                                                     }}
                                                     title="Copy message"
                                                 >
