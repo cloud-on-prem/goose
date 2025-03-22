@@ -1046,7 +1046,7 @@ const App: React.FC = () => {
                                                 }}
                                                 title="Copy message"
                                             >
-                                                {copiedMessageId === message.id ? 'Copied!' : 'Copy'}
+                                                <i className={`codicon ${copiedMessageId === message.id ? 'codicon-check' : 'codicon-copy'}`}></i>
                                             </button>
                                         </div>
                                     </div>

@@ -1205,10 +1205,14 @@
     border: none;
     color: var(--vscode-descriptionForeground);
     cursor: pointer;
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 2px;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 3px;
     opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
 .copy-button:hover {
@@ -1218,6 +1222,10 @@
 
 .copy-button.copied {
     color: var(--vscode-terminal-ansiGreen);
+}
+
+.copy-button .codicon {
+    font-size: 14px;
 }
 
 /* Fix specific issues with syntax highlighting containers */

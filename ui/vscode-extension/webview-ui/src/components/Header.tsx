@@ -15,6 +15,9 @@ export const Header: React.FC<HeaderProps> = ({
     onToggleSessionDrawer,
     isGenerating
 }) => {
+    // Display GENERATING status when isGenerating is true, otherwise show the actual status
+    const displayStatus = isGenerating ? 'GENERATING' : status;
+
     return (
         <div className="vscode-chat-header">
             <div className="vscode-chat-header-content">
@@ -27,8 +30,8 @@ export const Header: React.FC<HeaderProps> = ({
                 />
 
                 <div className="vscode-status-container">
-                    <div className={`vscode-status-badge ${status.toLowerCase()}`}>
-                        {status}
+                    <div className={`vscode-status-badge ${displayStatus.toLowerCase()}`}>
+                        {displayStatus}
                     </div>
                 </div>
             </div>
