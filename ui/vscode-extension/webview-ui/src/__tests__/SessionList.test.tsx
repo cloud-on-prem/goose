@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within as _within } from '@testing-library/react';
 import { SessionList, SessionMetadata } from '../components/SessionList';
 
 describe('SessionList Component', () => {

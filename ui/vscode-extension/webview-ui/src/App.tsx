@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import './vscodeStyles.css'; // Import VS Code theme variables
 // Import React Markdown for rendering markdown content
 import ReactMarkdown from 'react-markdown';
@@ -6,10 +6,6 @@ import remarkGfm from 'remark-gfm';
 // Import syntax highlighter for code blocks
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-// Import the VSCode API for communicating with the extension
-import { vscode } from './vscode';
-// Import types
-import { MessageType } from '../../src/shared/messageTypes';
 import { Message } from '../../src/shared/types';
 // Import new components
 import { Header } from './components/Header';
@@ -79,21 +75,21 @@ enum MessageType {
 const vscode = window.acquireVsCodeApi();
 
 const App: React.FC = () => {
-    const [editorContent, setEditorContent] = useState<string | null>(null);
-    const [editorFile, setEditorFile] = useState<string | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [_editorContent, _setEditorContent] = useState<string | null>(null);
+    const [_editorFile, _setEditorFile] = useState<string | null>(null);
+    const [errorMessage, _setErrorMessage] = useState<string | null>(null);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [messages, setMessages] = useState<Message[]>([]);
     const [serverStatus, setServerStatus] = useState<string>('stopped');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
-    const [showDebug, setShowDebug] = useState<boolean>(false);
+    const [_showDebug, _setShowDebug] = useState<boolean>(false);
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const [codeReferences, setCodeReferences] = useState<CodeReference[]>([]);
     const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
     const [showContextInfo, setShowContextInfo] = useState<boolean>(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
+    const [_processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
     const [intermediateText, setIntermediateText] = useState<string | null>(null);
 
     // New state for session management
@@ -101,21 +97,18 @@ const App: React.FC = () => {
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [showSessionDrawer, setShowSessionDrawer] = useState<boolean>(false);
 
-    // Scroll to bottom whenever messages change
+    const _activeSessionRef = useRef(currentSessionId);
+    const previousLoadingState = useRef(false);
+
+    // Scroll to bottom of messages when messages change
     useEffect(() => {
         if (messagesEndRef.current) {
-            // Use a slight delay to ensure the UI has fully rendered
-            setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'end',  // Align to the bottom of the container
-                    inline: 'nearest'
-                });
-            }, 100);
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages]);
+    }, [messagesEndRef, messages.length]);
 
     // Add a separate effect for session loading to properly handle scroll
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (currentSessionId && messages.length > 0) {
             // Allow the DOM to update first
@@ -375,36 +368,24 @@ const App: React.FC = () => {
     };
 
     // Request active editor content
-    const getActiveEditorContent = () => {
+    const _getActiveEditorContent = () => {
         vscode.postMessage({
             command: MessageType.GET_ACTIVE_EDITOR_CONTENT
         });
     };
 
-    // Add a wrapper function for setMessages at the beginning of the component
-    const safeguardedSetMessages = (messageUpdater: Message[] | ((prevMessages: Message[]) => Message[])) => {
-        setMessages(prevMessages => {
-            let newMessages;
-
-            if (typeof messageUpdater === 'function') {
-                newMessages = messageUpdater(prevMessages);
-            } else {
-                newMessages = messageUpdater;
-            }
-
-            // Never allow empty array (causes blank screen)
-            if (newMessages.length === 0) {
-                console.warn('Prevented setting empty messages array');
-                return prevMessages;
-            }
-
-            return newMessages;
-        });
-    };
+    // Safely update messages state with error handling
+    const safeguardedSetMessages = useCallback((updater: React.SetStateAction<Message[]>) => {
+        try {
+            setMessages(updater);
+        } catch (err) {
+            console.error('Error updating messages:', err);
+        }
+    }, []);
 
     // Send a chat message
     const sendChatMessage = () => {
-        if (!inputMessage.trim() && codeReferences.length === 0) return;
+        if (!inputMessage.trim() && codeReferences.length === 0) { return; }
 
         // Create a unique ID for this message
         const messageId = `user_${Date.now()}`;
@@ -471,25 +452,25 @@ const App: React.FC = () => {
     };
 
     // Handle form submission
-    const handleSubmit = (e: React.FormEvent) => {
+    const _handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         sendChatMessage();
     };
 
     // Handle input change 
-    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const _handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInputMessage(e.target.value);
     };
 
     // Helper to check if two messages have identical content
-    const messagesHaveIdenticalContent = (msg1: Message, msg2: Message): boolean => {
-        if (msg1.role !== msg2.role) return false;
-        if (!msg1.content || !msg2.content) return false;
-        if (msg1.content.length !== msg2.content.length) return false;
+    const _messagesHaveIdenticalContent = (msg1: Message, msg2: Message): boolean => {
+        if (msg1.role !== msg2.role) { return false; }
+        if (!msg1.content || !msg2.content) { return false; }
+        if (msg1.content.length !== msg2.content.length) { return false; }
 
         for (let i = 0; i < msg1.content.length; i++) {
-            if (msg1.content[i].type !== msg2.content[i].type) return false;
-            if (msg1.content[i].text !== msg2.content[i].text) return false;
+            if (msg1.content[i].type !== msg2.content[i].type) { return false; }
+            if (msg1.content[i].text !== msg2.content[i].text) { return false; }
         }
 
         return true;
@@ -567,7 +548,7 @@ const App: React.FC = () => {
                             remarkPlugins={[remarkGfm]}
                             components={{
                                 // Custom code block rendering with syntax highlighting
-                                code({ node, inline, className, children, ...props }) {
+                                code({ node: _node, inline, className, children, ...props }) {
                                     const match = /language-(\w+)/.exec(className || '');
                                     const lang = match ? match[1] : '';
 
@@ -629,7 +610,7 @@ const App: React.FC = () => {
     };
 
     // Component to show generating response with intermediate content
-    const GeneratingIndicator = ({ onStop, intermediateContent = null }) => {
+    const _GeneratingIndicator = ({ onStop, intermediateContent = null }) => {
         return (
             <div className="generating-container">
                 {intermediateContent && (
@@ -637,7 +618,7 @@ const App: React.FC = () => {
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
-                                code({ node, inline, className, children, ...props }) {
+                                code({ node: _node, inline, className, children, ...props }) {
                                     const match = /language-(\w+)/.exec(className || '');
                                     const lang = match ? match[1] : '';
 
@@ -708,8 +689,8 @@ const App: React.FC = () => {
     };
 
     // Copy message content to clipboard
-    const copyMessageToClipboard = (message: Message) => {
-        if (!message.content || message.content.length === 0) return;
+    const _copyMessageToClipboard = (message: Message) => {
+        if (!message.content || message.content.length === 0) { return; }
 
         // Collect all text content
         const textContent = message.content
@@ -730,12 +711,12 @@ const App: React.FC = () => {
     };
 
     // Remove code reference
-    const removeCodeReference = (id: string) => {
+    const _removeCodeReference = (id: string) => {
         setCodeReferences(prev => prev.filter(ref => ref.id !== id));
     };
 
     // Code reference chip component
-    const CodeReferenceChip = ({ codeRef, onRemove }: { codeRef: CodeReference, onRemove: () => void }) => (
+    const _CodeReferenceChip = ({ codeRef, onRemove }: { codeRef: CodeReference, onRemove: () => void }) => (
         <div className="code-reference-chip">
             <span style={{ marginRight: '6px', display: 'flex', alignItems: 'center' }}>
                 <i className="codicon codicon-file-code"></i>
@@ -781,7 +762,7 @@ const App: React.FC = () => {
     }, []);
 
     // Context info button component
-    const ContextInfoButton = () => (
+    const _ContextInfoButton = () => (
         <div
             className="context-info-button"
             style={{
@@ -810,8 +791,8 @@ const App: React.FC = () => {
     );
 
     // Context info panel
-    const ContextInfoPanel = () => {
-        if (!workspaceContext || !showContextInfo) return null;
+    const _ContextInfoPanel = () => {
+        if (!workspaceContext || !showContextInfo) { return null; }
 
         return (
             <div
@@ -896,7 +877,7 @@ const App: React.FC = () => {
     };
 
     const handleSessionSelect = (sessionId: string) => {
-        if (isLoading) return; // Prevent session switching during generation
+        if (isLoading) { return; } // Prevent session switching during generation
 
         // If we're already on this session, just close the drawer
         if (sessionId === currentSessionId) {
@@ -914,7 +895,7 @@ const App: React.FC = () => {
     };
 
     const handleCreateSession = () => {
-        if (isLoading) return; // Prevent session creation during generation
+        if (isLoading) { return; } // Prevent session creation during generation
 
         vscode.postMessage({
             command: MessageType.CREATE_SESSION
@@ -925,7 +906,7 @@ const App: React.FC = () => {
     };
 
     const toggleSessionDrawer = () => {
-        if (isLoading) return; // Prevent toggling during generation
+        if (isLoading) { return; } // Prevent toggling during generation
 
         // If we're opening the drawer, refresh the sessions list
         if (!showSessionDrawer) {
@@ -950,6 +931,54 @@ const App: React.FC = () => {
 
         return session;
     }, [sessions, currentSessionId]);
+
+    // Check if message generation has ended and update messages
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        // When a message ends, we convert its intermediate content to final content
+        if (previousLoadingState.current && !isLoading) {
+            // Only update if we have intermediate text
+            if (intermediateText && currentMessageId) {
+                safeguardedSetMessages(prevMessages => {
+                    // Check if the message already exists in the array
+                    const existingMessageIndex = prevMessages.findIndex(m => m.id === currentMessageId);
+
+                    if (existingMessageIndex >= 0) {
+                        // Message exists, update it
+                        const updatedMessages = [...prevMessages];
+                        updatedMessages[existingMessageIndex] = {
+                            ...updatedMessages[existingMessageIndex],
+                            content: [{ type: 'text', text: intermediateText }]
+                        };
+                        return updatedMessages;
+                    } else {
+                        // Message doesn't exist, add it
+                        return [...prevMessages, {
+                            id: currentMessageId,
+                            role: 'assistant',
+                            created: Date.now(),
+                            content: [{ type: 'text', text: intermediateText }]
+                        }];
+                    }
+                });
+            }
+        }
+
+        // Update previous loading state
+        previousLoadingState.current = isLoading;
+    }, [safeguardedSetMessages, isLoading, intermediateText, currentMessageId]);
+
+    // Handler for window messages from extension
+    const messageEventHandler = useCallback((_event) => {
+        // ... existing code ...
+    }, []);
+
+    useEffect(() => {
+        window.addEventListener('message', messageEventHandler);
+        return () => {
+            window.removeEventListener('message', messageEventHandler);
+        };
+    }, [messageEventHandler]);
 
     // Render function
     return (

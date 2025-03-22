@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi as _vi } from 'vitest';
 
 // Simple test for main.tsx that doesn't try to import the actual file
 describe('main.tsx', () => {

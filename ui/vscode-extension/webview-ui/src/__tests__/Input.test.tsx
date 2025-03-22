@@ -22,7 +22,7 @@ describe('Input Functionality', () => {
         });
 
         it('allows typing in the textarea', async () => {
-            const user = userEvent.setup();
+            const _user = userEvent.setup();
             const onChange = vi.fn();
 
             render(
@@ -38,7 +38,7 @@ describe('Input Functionality', () => {
             );
 
             const textarea = screen.getByPlaceholderText('Ask Goose a question...');
-            await user.type(textarea, 'Hello, Goose!');
+            await _user.type(textarea, 'Hello, Goose!');
 
             expect(onChange).toHaveBeenCalled();
             expect(textarea).toHaveValue('Hello, Goose!');
@@ -110,7 +110,7 @@ describe('Input Functionality', () => {
         });
 
         it('calls remove handler when × button is clicked', async () => {
-            const user = userEvent.setup();
+            const _user = userEvent.setup();
             const removeHandler = vi.fn();
 
             const codeReference: CodeReference = {
@@ -139,14 +139,14 @@ describe('Input Functionality', () => {
                 </div>
             );
 
-            await user.click(screen.getByTitle('Remove code reference'));
+            await _user.click(screen.getByTitle('Remove code reference'));
             expect(removeHandler).toHaveBeenCalledTimes(1);
         });
     });
 
     describe('Form Submission', () => {
         it('submits the form when send button is clicked', async () => {
-            const user = userEvent.setup();
+            const _user = userEvent.setup();
             const handleSubmit = vi.fn(e => e.preventDefault());
 
             render(
@@ -160,12 +160,12 @@ describe('Input Functionality', () => {
                 </form>
             );
 
-            await user.click(screen.getByRole('button', { name: 'Send' }));
+            await _user.click(screen.getByRole('button', { name: 'Send' }));
             expect(handleSubmit).toHaveBeenCalledTimes(1);
         });
 
         it('submits the form when Enter is pressed (without Shift)', async () => {
-            const user = userEvent.setup();
+            const _user = userEvent.setup();
             const handleSubmit = vi.fn(e => e.preventDefault());
             const handleKeyDown = vi.fn(e => {
                 if (e.key === 'Enter' && !e.shiftKey) {

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach as _beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { Message, MessageType, TextContent } from '../test/mocks/types';
+import { Message, MessageType as _MessageType, TextContent } from '../test/mocks/types';
 
 // Mock the scrollIntoView method
 Element.prototype.scrollIntoView = vi.fn();

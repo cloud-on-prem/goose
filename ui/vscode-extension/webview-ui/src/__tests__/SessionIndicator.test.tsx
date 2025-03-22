@@ -75,7 +75,7 @@ describe('SessionIndicator', () => {
     });
 
     it('has disabled class and does not call toggle function when clicked during generation', () => {
-        const { container } = render(
+        const { container: _container } = render(
             <SessionIndicator
                 currentSession={mockSession}
                 onToggleSessionDrawer={mockToggleDrawer}
