@@ -2,11 +2,131 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://block.github.io/goose/blog</id>
     <title>codename goose Blog</title>
-    <updated>2025-03-20T00:00:00.000Z</updated>
+    <updated>2025-03-21T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://block.github.io/goose/blog"/>
     <subtitle>codename goose Blog</subtitle>
     <icon>https://block.github.io/goose/img/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[Codename Goose Goes to Boston]]></title>
+        <id>https://block.github.io/goose/blog/2025/03/21/goose-boston-meetup</id>
+        <link href="https://block.github.io/goose/blog/2025/03/21/goose-boston-meetup"/>
+        <updated>2025-03-21T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[We hosted our first Goose Meetup in Boston, bringing together over 70 community members for lightning talks, hacking, and lively conversations about agentic systems and the future of MCPs.]]></summary>
+        <content type="html"><![CDATA[<p><img decoding="async" loading="lazy" alt="blog cover" src="https://block.github.io/goose/assets/images/goose_goes_to_boston_banner-3ef0eedeb9d3eac56907c0c5e615d919.png" width="2240" height="1260" class="img_ev3q"></p>
+<p><em>Question: What happens when you bring 70+ AI enthusiasts, open source contributors, and curious learners together in one room?</em></p>
+<p><strong>Answer: You get an electric night filled with great conversations, hands-on hacking, and mind-blowing insights into agentic systems.</strong></p>
+<p>This week, we hosted our very first <a href="https://block.github.io/goose" target="_blank" rel="noopener noreferrer">Goose</a> Meetup in Boston at the Cambridge Innovation Center. The turnout and energy exceeded all expectations! From first-time Goose users to seasoned AI engineers, attendees gathered to explore how Goose and the <a href="https://modelcontextprotocol.io/introduction" target="_blank" rel="noopener noreferrer">Model Context Protocol (MCP)</a> are shaping the future of AI automation.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="why-we-hosted-this-meetup">Why We Hosted This Meetup<a href="https://block.github.io/goose/blog/2025/03/21/goose-boston-meetup#why-we-hosted-this-meetup" class="hash-link" aria-label="Direct link to Why We Hosted This Meetup" title="Direct link to Why We Hosted This Meetup">​</a></h2>
+<p>As our community continues to grow, we wanted to create a space where Goose enthusiasts could:</p>
+<p>✅ Network and meet like-minded technologists</p>
+<p>✅ Geek out over agentic systems and MCP</p>
+<p>✅ Learn through talks, demos, and hands-on hacking</p>
+<p>Boston has a thriving tech ecosystem, and it was incredible to see so many people come together to explore the future of AI agents.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="in-case-you-missed-it">In Case You Missed It<a href="https://block.github.io/goose/blog/2025/03/21/goose-boston-meetup#in-case-you-missed-it" class="hash-link" aria-label="Direct link to In Case You Missed It" title="Direct link to In Case You Missed It">​</a></h2>
+<p>After pizza and networking, we kicked off with two lightning talks that set the tone for the rest of the night:</p>
+<ul>
+<li>
+<p>Ebony Louis, Developer Advocate at Block, Inc. delivered an engaging introduction to Goose, covering how to get started, its capabilities, and a hands-on demo that hooked the audience. Reflecting on the night, she shared:</p>
+<blockquote>
+<p>"There’s no replacement for meeting in person and getting to talk to people face-to-face about where AI agents can take us. It was great to see the excitement of people who were using Goose for the first time, but it was even more productive to get questions and feedback about how we can work together to make the user experience better. AI is changing how we interact online, but this meetup was proof that it can bring us together in real life, too."</p>
+</blockquote>
+</li>
+</ul>
+<p><img decoding="async" loading="lazy" alt="Ebony takes the stage" src="https://block.github.io/goose/assets/images/ebony_preparing-013a8b1730a1f75484dfad5694a73a75.jpg" width="5712" height="4284" class="img_ev3q">
+<em>Ebony preparing to take the stage</em></p>
+<ul>
+<li>
+<p>Alex Hancock, Senior Software Engineer at Block, Inc. and MCP Committee Member, followed up with a deep dive into Model Context Protocol architecture, breaking down how it powers agentic systems and what’s next for the ecosystem. Alex was impressed by the enthusiasm in the room, sharing:</p>
+<blockquote>
+<p>"I was blown away by the attendance and the engagement. I had a lot of fun sticking around after the talks to answer questions and hear how people are thinking of using Goose and MCP."</p>
+</blockquote>
+</li>
+</ul>
+<p><img decoding="async" loading="lazy" alt="Alex speaking" src="https://block.github.io/goose/assets/images/alex_speaking-ec13442c55a42985517eb08e0b545137.jpg" width="5712" height="4284" class="img_ev3q">
+<em>Alex sharing MCP insights with the audience</em></p>
+<p>Both talks were packed with insights, great humor, and interactive moments that had attendees excited for what was to come.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="moments-we-loved">Moments We Loved<a href="https://block.github.io/goose/blog/2025/03/21/goose-boston-meetup#moments-we-loved" class="hash-link" aria-label="Direct link to Moments We Loved" title="Direct link to Moments We Loved">​</a></h2>
+<p>Some of our favorite highlights from the night:</p>
+<p>📞 Goose made a live phone call to Hack.Diversity alum Eliana Lopez during the event. This was a fun moment that showcased Goose's real-world capabilities in automating everyday tasks.</p>
+<!-- -->
+<div style="width:100%;max-width:800px;margin:0 auto"><video controls="" width="100%" height="400px" playsinline=""><source src="/goose/assets/medias/goose_makes_a_call-e45f1890addeb5018da2d70ee2e44796.mp4" type="video/mp4"><p>Your browser does not support the video tag.</p></video></div>
+<p>💻 Attendees jumped into hands-on hacking, working on their own projects, experimenting with Goose, and sharing ideas in real time. To make sure everyone could participate, we provided OpenRouter credits, allowing attendees to run Goose without worrying about access barriers.</p>
+<p><img decoding="async" loading="lazy" alt="Attendee hacking" src="https://block.github.io/goose/assets/images/attendee_hacking-bdac777f63da49683cf58513629ff01a.jpg" width="5712" height="4284" class="img_ev3q">
+<em>Attendee hacking alongside Goose</em></p>
+<p><img decoding="async" loading="lazy" alt="Debugging with attendees" src="https://block.github.io/goose/assets/images/debugging_with_attendees-528d912677fc352ddb3f601c2cf4c972.jpg" width="5712" height="4284" class="img_ev3q">
+<em>Rizel Scarlett debugging with meetup attendees</em></p>
+<p>💬 Riveting discussions sparked throughout the evening, including:</p>
+<ul>
+<li>Security for MCPs — How should we be thinking about security as agentic systems scale?</li>
+<li>The future of agentic systems — What are we now capable of, and what’s next?</li>
+</ul>
+<p><img decoding="async" loading="lazy" alt="chatting with attendees" src="https://block.github.io/goose/assets/images/goose_boston_conversations-01c3e57ecd38e55d3159caeb1ebb0fac.jpg" width="4284" height="5712" class="img_ev3q">
+<em>Alex chatting with attendees</em></p>
+<p>For Marcelle B., a Software Engineer at Block Inc., the meetup highlighted just how diverse the community was and reinforced the importance of making Goose accessible to everyone:</p>
+<blockquote>
+<p>"It was enlightening to see the variety of backgrounds of the attendees. For a few, Goose was an opportunity to bring the power of AI to bear on their project, and our meetup was a friendly place for them to dip their toes in. This gave me such empathy for the kind of product features and the level of rock-solid implementation we need in development, so that Goose can continue to be an empowering tool, rather than another AI product that you have to be some kind of 'insider' to use."</p>
+</blockquote>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="the-impact--whats-next">The Impact &amp; What’s Next<a href="https://block.github.io/goose/blog/2025/03/21/goose-boston-meetup#the-impact--whats-next" class="hash-link" aria-label="Direct link to The Impact &amp; What’s Next" title="Direct link to The Impact &amp; What’s Next">​</a></h2>
+<p>The excitement and engagement from this meetup proved just how much community-driven learning matters. Attendees loved the experience, with one person sharing:</p>
+<blockquote>
+<p>"Fantastic event—well-paced, super friendly, learned a lot, and met great people. 10/10 would recommend!"</p>
+</blockquote>
+<p>This event wouldn’t have been the same without all of you. A huge shoutout to Hack.Diversity, Resilient Coders, Goose contributors, and Boston’s tech scene for showing up, supporting, and making this meetup such a success!</p>
+<p><img decoding="async" loading="lazy" alt="Goose Team in Boston" src="https://block.github.io/goose/assets/images/goose_team_in_boston-83ed4d854908362156459ede34035521.jpg" width="5712" height="4284" class="img_ev3q">
+<em>The Goose Team in Boston</em></p>
+<ul>
+<li>
+<p>If you're experiencing FOMO (the Fear of Missing Out) and want to join the next meetup, follow us on <a href="https://linktr.ee/blockopensource" target="_blank" rel="noopener noreferrer">social media</a> to stay updated.</p>
+</li>
+<li>
+<p>Bring a Goose meetup to your city! If you have a venue, reach out to us on <a href="https://discord.gg/block-opensource" target="_blank" rel="noopener noreferrer">Discord</a>—let’s make it happen!</p>
+</li>
+</ul>
+]]></content>
+        <author>
+            <name>Rizel Scarlett</name>
+        </author>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Cracking the Code with VS Code MCP]]></title>
+        <id>https://block.github.io/goose/blog/2025/03/21/goose-vscode</id>
+        <link href="https://block.github.io/goose/blog/2025/03/21/goose-vscode"/>
+        <updated>2025-03-21T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Connect Goose directly to your code editor with this Visual Studio Code MCP.]]></summary>
+        <content type="html"><![CDATA[<p><img decoding="async" loading="lazy" alt="blog cover" src="https://block.github.io/goose/assets/images/vscodestream-74eafa34e7ae10cfb738feddecc98519.png" width="1206" height="633" class="img_ev3q"></p>
+<p>Want to use Goose in VS Code? On the recent <a href="https://www.youtube.com/watch?v=hG7AnTw-GLU&amp;ab_channel=BlockOpenSource" target="_blank" rel="noopener noreferrer">Wild Goose Case livestream</a>, hosts <a href="https://www.linkedin.com/in/ebonylouis/" target="_blank" rel="noopener noreferrer">Ebony Louis</a> and <a href="https://www.linkedin.com/in/acekyd/" target="_blank" rel="noopener noreferrer">Adewale Abati</a> were joined by <a href="https://www.linkedin.com/in/andrewgertig/" target="_blank" rel="noopener noreferrer">Andrew Gertig</a>, Engineering Lead at Cash App, as he demonstrated the new VSCode MCP and how it brings powerful Goose-assisted coding capabilities directly into VS Code.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="what-is-the-vscode-mcp">What is the VSCode MCP?<a href="https://block.github.io/goose/blog/2025/03/21/goose-vscode#what-is-the-vscode-mcp" class="hash-link" aria-label="Direct link to What is the VSCode MCP?" title="Direct link to What is the VSCode MCP?">​</a></h2>
+<p>The <a href="https://github.com/block/vscode-mcp" target="_blank" rel="noopener noreferrer">VSCode MCP Server</a> and its companion <a href="https://marketplace.visualstudio.com/items?itemName=block.vscode-mcp-extension" target="_blank" rel="noopener noreferrer">VSCode Extension</a> enable AI agents like Goose to interact with VS Code through the Model Context Protocol.</p>
+<p>As Andrew explained during the stream, an MCP (<a href="https://modelcontextprotocol.io/introduction" target="_blank" rel="noopener noreferrer">Model Context Protocol</a>) server acts as a proxy between a Large Language Model (LLM) and whatever applications or tools you want to access to, in this case, VS Code. Extensions are add-ons based on this protocol that provide a way to extend Goose's functionality for your workflow.</p>
+<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">vscode-mcp/</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">├── server/    # MCP server implementation</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">└── extension/ # VS Code extension</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="key-features">Key Features<a href="https://block.github.io/goose/blog/2025/03/21/goose-vscode#key-features" class="hash-link" aria-label="Direct link to Key Features" title="Direct link to Key Features">​</a></h2>
+<p>VSCode MCP and VSCode Extension offer several powerful features for you to explore:</p>
+<p><strong>Intelligent Context Awareness</strong></p>
+<p>The extension maintains synchronization between Goose and your VS Code environment to understand your project structure and make contextually relevant suggestions. During the live demo, this came in handy as Goose navigated complex codebases with precision.</p>
+<p><strong>Interactive Code Modifications</strong></p>
+<p>Rather than making direct changes, the extension presents modifications through VS Code's diff tool. This ensures that no code changes happen without your explicit approval, allowing you to keep control over your codebase.</p>
+<p><strong>Progressive Complexity Handling</strong></p>
+<p>During the demo, the VSCode MCP seamlessly handled tasks ranging in complexity, from basic text modifications to implementing interactive features like animated emojis with mouse interactions.</p>
+<p><strong>Real-time Visual Feedback</strong></p>
+<p>Developers can see proposed changes in real-time with the diff view, making it easy to understand exactly what modifications Goose is suggesting before accepting them. This was demonstrated when an emoji's sizes visually while preserving existing functionality.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="whats-next-for-vscode-mcp">What's Next for VSCode MCP?<a href="https://block.github.io/goose/blog/2025/03/21/goose-vscode#whats-next-for-vscode-mcp" class="hash-link" aria-label="Direct link to What's Next for VSCode MCP?" title="Direct link to What's Next for VSCode MCP?">​</a></h2>
+<p>The features don't end here. The team is actively exploring several exciting features to take VSCode MCP to the next level:</p>
+<ul>
+<li><strong>Custom diff tool for granular control</strong> - This means you will be able to be selective on specific parts of changes you want to accept or reject.</li>
+<li><strong>Smart navigation to specific code locations</strong> - Imagine being able to ask Goose to take you directly to a function definition or a specific implementation.</li>
+<li><strong>Enhanced linting integration</strong> - To help maintain code quality standards automatically, making it way easier to fix issues before production.</li>
+<li><strong>Terminal integration for command execution</strong> - This would allow Goose to execute commands and display results right in your development environment.</li>
+<li><strong>Potential VS Code sidebar integration for Goose chat</strong> - Andrew showed a quick preview of an early prototype showing Goose running directly inside VS Code.</li>
+</ul>
+<h1>Community and Contributing</h1>
+<p>The project is open source, and welcomes contributions from the community. If you'd like to support the project or directly contribute to it, you can check out <a href="https://github.com/block/vscode-mcp" target="_blank" rel="noopener noreferrer">the VSCode MCP repo on GitHub</a>, or <a href="https://discord.gg/block-opensource" target="_blank" rel="noopener noreferrer">join the Block Open Source Discord</a> if you'd like to ask the team any questions or start discussions.</p>
+<p>You can also follow the <a href="https://block.github.io/goose/docs/tutorials/vscode-mcp" target="_blank" rel="noopener noreferrer">tutorial showing you how to integrate VS Code with Goose</a>.</p>
+]]></content>
+        <author>
+            <name>Tania Chakraborty</name>
+        </author>
+    </entry>
     <entry>
         <title type="html"><![CDATA[How I Use Goose to Plan My Week with Asana and Google Calendar MCPs]]></title>
         <id>https://block.github.io/goose/blog/2025/03/20/asana-calendar-mcp</id>
@@ -36,6 +156,112 @@
         <author>
             <name>Angie Jones</name>
             <uri>https://angiejones.tech</uri>
+        </author>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[AI Prompting 101: How to Get the Best Responses from Your AI Agent]]></title>
+        <id>https://block.github.io/goose/blog/2025/03/19/better-ai-prompting</id>
+        <link href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting"/>
+        <updated>2025-03-19T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[How to prompt your AI agent the right way.]]></summary>
+        <content type="html"><![CDATA[<p><img decoding="async" loading="lazy" alt="blog cover" src="https://block.github.io/goose/assets/images/prompt-078b12695f95c4f0eac3861a8a2611ef.png" width="2240" height="1260" class="img_ev3q"></p>
+<p>Remember that saying, "it’s not what you ask, but <strong>how you ask</strong>"?</p>
+<p>When I first started working with Goose as an AI agent, I was convinced there had to be one ‘best' prompting style. I spent so much time trying to figure out which one was superior, but the more I used Goose, the more I realized that couldn't be further from the truth. There isn’t one <em>right</em>  way to prompt AI, but there are better approaches depending on what your end goal is.</p>
+<p>So, let’s go through <strong>which prompt style works best for your specific needs</strong>, and how you can use them to vibe code a little better with Goose.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="instruction-based-prompting">Instruction-Based Prompting<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#instruction-based-prompting" class="hash-link" aria-label="Direct link to Instruction-Based Prompting" title="Direct link to Instruction-Based Prompting">​</a></h2>
+<p>If you’re not a developer or you're just new to Goose, this is a great place to start. The best way to get good responses is to be as clear and direct as possible. Goose works best when given specific instructions, so tell it exactly what you need and include all of the important details. If you’re too vague, you might end up with an overly technical or even a possibly incomplete answer that doesn’t actually help you.</p>
+<p>For example, instead of saying:</p>
+<p>❌ Okay Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, what’s a pull request?</strong></em></p>
+</blockquote>
+<p>This might give you a super technical definition that assumes you already know the basics.</p>
+<p>So, you could say:</p>
+<p>✅ Better Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, explain how GitHub pull requests work like I’m new to coding</strong></em></p>
+</blockquote>
+<p>This tells Goose exactly what you need and at what level.</p>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>pro tip</div><div class="admonitionContent_BuS1"><p>If you want Goose to remember your preferences, you can say,</p><blockquote>
+<p><em><strong>Goose, remember I’m not a developer. Explain things at a high level unless I ask for technical details</strong></em></p>
+</blockquote><p>If you have the <a href="https://block.github.io/goose/docs/tutorials/memory-mcp">Memory Extension</a> enabled, Goose will save this preference so you won’t have to remind it every time.</p></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="chain-of-thought-prompting">Chain-of-Thought Prompting<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#chain-of-thought-prompting" class="hash-link" aria-label="Direct link to Chain-of-Thought Prompting" title="Direct link to Chain-of-Thought Prompting">​</a></h2>
+<p>Sometimes a topic or task can just be too much to tackle all at once, and that’s where Chain-of-Thought Prompting comes in. Instead of getting this enormous and complicated response back, you can guide Goose to break things down step by step so it’s easier to follow.</p>
+<p>For example, instead of saying:</p>
+<p>❌ Okay Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, what are Model Context Protocol Servers, and how are they used in goose?</strong></em></p>
+</blockquote>
+<p>which might get you a response that's hard to follow, you could say:</p>
+<p>✅ Better Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, walk me through what MCPs are and how they're used in gosoe, step by step</strong></em></p>
+</blockquote>
+<p>This forces Goose to slow down and explain each part clearly, making it easier to understand.</p>
+<p>Now, if you want to take it a step further and make sure Goose understands the exact style of responses you're expecting, that’s when Few-Shot Prompting is the way to go.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="few-shot-prompting">Few-Shot Prompting<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#few-shot-prompting" class="hash-link" aria-label="Direct link to Few-Shot Prompting" title="Direct link to Few-Shot Prompting">​</a></h2>
+<p>If you need Goose to match a specific style or format, the best way to get there is by showing it what you want. I use this all the time! Since AI models learn patterns from examples, giving Goose a reference helps it skip the guesswork and just get straight to the point.</p>
+<p>For example, instead of saying:</p>
+<p>❌ Okay Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, summarize this report</strong></em></p>
+</blockquote>
+<p>you could say:</p>
+<p>✅ Better Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, here’s how I usually summarize reports: (example summary). Can you summarize this new report the same way?</strong></em></p>
+</blockquote>
+<p>By providing an example, you’re guiding Goose to the answer that you actually want.</p>
+<p>Now, what if you've given Goose an example and it’s first response isn’t quite right? There's no need to end the session and start over, that’s when Iterative Refinement Prompting is useful.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="iterative-refinement-prompting">Iterative Refinement Prompting<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#iterative-refinement-prompting" class="hash-link" aria-label="Direct link to Iterative Refinement Prompting" title="Direct link to Iterative Refinement Prompting">​</a></h2>
+<p>Let’s be real, Goose just like any AI agent isn’t always going to get it 'right' on the first try. Sometimes, it gives you a response that's way too technical, other times, it might completely miss the mark or even worse, hallucinate its way into a weird, made-up answer, that kind of sounds true. But instead of giving up and starting over, you can steer the conversation by giving feedback on what needs to change.</p>
+<p>Since Goose allows you to bring your own LLM, the way it responds depends a lot on which model you’re using. Some LLMs need a little extra guidance, while others might require a few rounds of refinement before they get things right. The good news? You can shape the response without completely starting over.</p>
+<p>For example, if Goose spits out something overly complicated, don’t just accept it, you can push back! Try saying:</p>
+<blockquote>
+<p><em><strong>Goose, this response is too technical. Can you simplify it?</strong></em></p>
+</blockquote>
+<p>Or if something sounds off and you want to do a fact check:</p>
+<blockquote>
+<p><em><strong>Goose, where did you get that information? How do you know it's accurate?</strong></em></p>
+</blockquote>
+<p>Think of working with Goose like pair programming or collaborating with a coworker. Sometimes, you need to clarify what you want or redirect the conversation to get make sure you're both on the same page.</p>
+<p>But what if you don’t have a clear example or specific instructions to guide Goose? That’s when I would use Zero-Shot Prompting.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="zero-shot-prompting">Zero-Shot Prompting<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#zero-shot-prompting" class="hash-link" aria-label="Direct link to Zero-Shot Prompting" title="Direct link to Zero-Shot Prompting">​</a></h2>
+<p>Sometimes, you just want Goose to take a wild guess, get a little creative, and run with it. That’s exactly what Zero-Shot Prompting is for, it lets Goose figure things out on its own, without any examples or extra guidance from you.</p>
+<p>For example, you might say:</p>
+<blockquote>
+<p><em><strong>Goose, write me a project update for my team</strong></em></p>
+</blockquote>
+<p>or:</p>
+<blockquote>
+<p><em><strong>Goose, I want to build a cool prompt directory</strong></em></p>
+</blockquote>
+<p>I love using this approach when I have a rough idea but no real clear direction. It’s like brainstorming but with AI, Goose will throw out ideas, suggest next steps, and sometimes even point out things I would’ve never even thought of. More often than not, my original idea ends up 10x better just by letting Goose take the lead.</p>
+<p>Now, if you want Goose to not just come up with amazing ideas but also be funny, helpful, and maybe even a little nicer to you, that’s when you need to put those manners you learned in elementary school to use.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="politeness-based-prompting">Politeness-Based Prompting<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#politeness-based-prompting" class="hash-link" aria-label="Direct link to Politeness-Based Prompting" title="Direct link to Politeness-Based Prompting">​</a></h2>
+<p>Believe it or not, being polite actually makes AI responses better! Even though Goose isn’t self-aware……yet…… 👀, AI models tend to generate more thoughtful, structured, and sometimes even friendlier replies when asked nicely. So yes, saying “please” and “thank you” actually makes a difference.</p>
+<p>For example, instead of saying:</p>
+<p>❌ Okay Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, generate a project update</strong></em></p>
+</blockquote>
+<p>you could say:</p>
+<p>✅ Better Prompt:</p>
+<blockquote>
+<p><em><strong>Goose, could you generate a project update for me, please? Thanks!</strong></em></p>
+</blockquote>
+<p>Goose will respond either way, but <strong>trust me</strong>, polite prompts tend to get you better answers. One of our users once got the sweetest response from Goose at the end of a project, like it was genuinely grateful for the collaboration and even wished them sweet dreams. It was adorable!!</p>
+<p><img decoding="async" loading="lazy" alt="goose response" src="https://block.github.io/goose/assets/images/politenessprompt-8bde8ee9a219af685f98f45be5977226.png" width="2322" height="1470" class="img_ev3q"></p>
+<blockquote>
+<p><em>Here’s the actual response, Goose is really out here making people’s day.</em></p>
+</blockquote>
+<p>And the best part? This works with any prompting style. So, if you want Goose to be helpful, clear, and maybe even a little extra nice to you, be good to Goose and Goose will be good to you.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="the-best-prompts-feel-natural">The Best Prompts Feel Natural<a href="https://block.github.io/goose/blog/2025/03/19/better-ai-prompting#the-best-prompts-feel-natural" class="hash-link" aria-label="Direct link to The Best Prompts Feel Natural" title="Direct link to The Best Prompts Feel Natural">​</a></h2>
+<p>At the end of the day, all these prompting styles are just tools, at your disposal. The most important thing is to keep your prompts clear and natural. You don’t have to overthink it, but adding a little structure can make a huge difference in getting the responses you actually want.</p>
+<p>Goose is here to make your life easier, so the next time you open up a session, just keep your goal in mind, experiment with different prompting styles, and see what works best for you.</p>
+]]></content>
+        <author>
+            <name>Ebony Louis</name>
         </author>
     </entry>
     <entry>
