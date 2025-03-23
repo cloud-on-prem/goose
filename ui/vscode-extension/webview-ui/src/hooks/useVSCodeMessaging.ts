@@ -62,6 +62,9 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
             return;
         }
 
+        // Log the session ID for debugging
+        console.log('Sending message with sessionId:', sessionId);
+
         // Create a unique ID for this message
         const messageId = `user_${Date.now()}`;
 
@@ -91,7 +94,8 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
             id: messageId,
             role: 'user',
             created: Date.now(),
-            content: content as any // Type assertion needed due to content structure
+            content: content as any, // Type assertion needed due to content structure
+            sessionId: sessionId // Add sessionId to the message object for tracking
         };
 
         // Update messages state with the new message
@@ -144,10 +148,64 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
             switch (message.command) {
                 case MessageType.CHAT_RESPONSE:
                     if (message.message) {
-                        // Skip if this message has already been processed to avoid duplicates
+                        // If this is a thinking message, update the intermediate text
+                        if (message.message.content && Array.isArray(message.message.content)) {
+                            const thinkingContent = message.message.content.find(
+                                (item: any) => item.type === 'thinking' || item.type === 'redacted_thinking'
+                            );
+
+                            if (thinkingContent && 'thinking' in thinkingContent) {
+                                setIntermediateText(thinkingContent.thinking);
+                                return; // Don't add thinking messages to the main message list
+                            }
+                        }
+
+                        // Get a content summary for comparison
+                        const getContentSummary = (msg: any) => {
+                            if (!msg.content || !Array.isArray(msg.content)) return '';
+                            return msg.content.map((item: any) => {
+                                if (item.type === 'text') return item.text || '';
+                                if (item.type === 'toolRequest') return item.id || '';
+                                return '';
+                            }).join('|');
+                        };
+
+                        const newContentSummary = getContentSummary(message.message);
+
+                        // Check if we have an existing message with the same ID
                         if (message.message.id && processedMessageIds.has(message.message.id)) {
-                            console.log('Skipping duplicate message:', message.message.id);
+                            // If content is actually different, update the existing message
+                            const existingMsgIndex = messages.findIndex(m => m.id === message.message.id);
+
+                            if (existingMsgIndex !== -1) {
+                                const existingContentSummary = getContentSummary(messages[existingMsgIndex]);
+
+                                // Only update if the content has changed
+                                if (newContentSummary !== existingContentSummary) {
+                                    console.log('Updating existing message with new content:', message.message.id);
+
+                                    safeguardedSetMessages(prev => {
+                                        const updated = [...prev];
+                                        updated[existingMsgIndex] = message.message;
+                                        return updated;
+                                    });
+                                } else {
+                                    console.log('Content unchanged, skipping update');
+                                }
+                            }
                             return;
+                        }
+
+                        // Filter out empty text messages to prevent duplicate "Generating content..." messages
+                        if (message.message.content && Array.isArray(message.message.content)) {
+                            const hasEmptyTextOnly = message.message.content.every(
+                                (item: any) => item.type === 'text' && (!item.text || item.text.trim() === '')
+                            );
+
+                            if (hasEmptyTextOnly && message.message.content.length > 0) {
+                                console.log('Skipping empty text message');
+                                return;
+                            }
                         }
 
                         // Add the message ID to processed set
@@ -161,6 +219,13 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
 
                         // Now add the message to the state
                         safeguardedSetMessages(prev => [...prev, message.message]);
+                    }
+                    break;
+                case MessageType.AI_MESSAGE:
+                    // Sometimes we receive partial content through AI_MESSAGE type
+                    if (message.content && typeof message.content === 'string') {
+                        // This is likely thinking/intermediate content
+                        setIntermediateText(message.content);
                     }
                     break;
                 case MessageType.SERVER_STATUS:
