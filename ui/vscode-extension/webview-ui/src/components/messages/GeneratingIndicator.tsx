@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -13,70 +13,90 @@ const GeneratingIndicator: React.FC<GeneratingIndicatorProps> = ({
     onStop,
     intermediateContent = null
 }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const toggleCollapse = () => {
+        setIsCollapsed(!isCollapsed);
+    };
+
     return (
         <div className="generating-container">
             {intermediateContent && (
-                <div className="intermediate-text">
-                    <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                            code({ _node, inline, className, children, ...props }: {
-                                _node?: any;
-                                inline?: boolean;
-                                className?: string;
-                                children: React.ReactNode;
-                            }) {
-                                const match = /language-(\w+)/.exec(className || '');
-                                const lang = match ? match[1] : '';
+                <div className="thinking-content">
+                    <div className="thinking-header">
+                        <span>Thinking</span>
+                        <button
+                            className="collapse-button"
+                            onClick={toggleCollapse}
+                            title={isCollapsed ? "Expand thinking" : "Collapse thinking"}
+                        >
+                            {isCollapsed ? "+" : "-"}
+                        </button>
+                    </div>
+                    {!isCollapsed && (
+                        <div className="intermediate-text">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    code({ _node, inline, className, children, ...props }: {
+                                        _node?: any;
+                                        inline?: boolean;
+                                        className?: string;
+                                        children: React.ReactNode;
+                                    }) {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const lang = match ? match[1] : '';
 
-                                if (!inline) {
-                                    return (
-                                        <SyntaxHighlighter
-                                            style={{
-                                                ...vscDarkPlus,
-                                                'pre[class*="language-"]': {
-                                                    background: 'var(--vscode-textCodeBlock-background)',
-                                                    margin: '1em 0',
-                                                    padding: '1em',
-                                                    borderRadius: '4px',
-                                                    border: '1px solid var(--vscode-widget-border)'
-                                                },
-                                                'code[class*="language-"]': {
-                                                    background: 'var(--vscode-textCodeBlock-background)',
-                                                    padding: '0',
-                                                    fontFamily: 'var(--vscode-editor-font-family)',
-                                                    fontSize: 'var(--vscode-editor-font-size)'
-                                                }
-                                            }}
-                                            language={lang || 'text'}
-                                            PreTag="div"
-                                            wrapLongLines={true}
-                                            customStyle={{
-                                                margin: '1em 0',
-                                                padding: '0',
-                                                width: '100%',
-                                                overflow: 'auto'
-                                            }}
-                                            {...props}
-                                        >
-                                            {String(children).replace(/\n$/, '')}
-                                        </SyntaxHighlighter>
-                                    );
-                                }
+                                        if (!inline) {
+                                            return (
+                                                <SyntaxHighlighter
+                                                    style={{
+                                                        ...vscDarkPlus,
+                                                        'pre[class*="language-"]': {
+                                                            background: 'var(--vscode-textCodeBlock-background)',
+                                                            margin: '1em 0',
+                                                            padding: '1em',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid var(--vscode-widget-border)'
+                                                        },
+                                                        'code[class*="language-"]': {
+                                                            background: 'var(--vscode-textCodeBlock-background)',
+                                                            padding: '0',
+                                                            fontFamily: 'var(--vscode-editor-font-family)',
+                                                            fontSize: 'var(--vscode-editor-font-size)'
+                                                        }
+                                                    }}
+                                                    language={lang || 'text'}
+                                                    PreTag="div"
+                                                    wrapLongLines={true}
+                                                    customStyle={{
+                                                        margin: '1em 0',
+                                                        padding: '0',
+                                                        width: '100%',
+                                                        overflow: 'auto'
+                                                    }}
+                                                    {...props}
+                                                >
+                                                    {String(children).replace(/\n$/, '')}
+                                                </SyntaxHighlighter>
+                                            );
+                                        }
 
-                                return (
-                                    <code
-                                        className={`inline-code ${className || ''}`}
-                                        {...props}
-                                    >
-                                        {children}
-                                    </code>
-                                );
-                            }
-                        }}
-                    >
-                        {intermediateContent}
-                    </ReactMarkdown>
+                                        return (
+                                            <code
+                                                className={`inline-code ${className || ''}`}
+                                                {...props}
+                                            >
+                                                {children}
+                                            </code>
+                                        );
+                                    }
+                                }}
+                            >
+                                {intermediateContent}
+                            </ReactMarkdown>
+                        </div>
+                    )}
                 </div>
             )}
             <div className="generating-indicator">
