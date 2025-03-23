@@ -11,6 +11,9 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.vscode-test.*
 
+# Dist directory (contains packaged versions)
+dist/**
+
 # Webview UI source files (only dist is needed)
 webview-ui/src/**
 webview-ui/node_modules/**

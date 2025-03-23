@@ -1,0 +1,76 @@
+name: Package and Release VS Code Extension
+
+on:
+  push:
+    tags:
+      - 'vscode-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/vscode-extension/package-lock.json
+      
+      - name: Determine Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Extract version from tag (remove 'vscode-v' prefix)
+            VERSION="${GITHUB_REF#refs/tags/vscode-v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+      
+      - name: Install Dependencies
+        run: |
+          cd ui/vscode-extension
+          npm ci
+          cd webview-ui
+          npm ci
+      
+      - name: Update Version
+        run: |
+          cd ui/vscode-extension
+          sed -i "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"${{ steps.version.outputs.version }}\"/" package.json
+      
+      - name: Package Extension
+        run: |
+          cd ui/vscode-extension
+          mkdir -p dist
+          npm run compile
+          npx @vscode/vsce package --no-dependencies --no-yarn -o dist/goose-vscode-${{ steps.version.outputs.version }}.vsix
+          
+          # Verify the package was created
+          if [ ! -f "dist/goose-vscode-${{ steps.version.outputs.version }}.vsix" ]; then
+            echo "Failed to create the VSIX package"
+            exit 1
+          fi
+      
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: VS Code Extension v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: ui/vscode-extension/dist/*.vsix
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

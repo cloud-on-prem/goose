@@ -13,10 +13,26 @@ This extension brings Goose AI functionality to Visual Studio Code.
 
 ## Requirements
 
-You need have Goose Desktop installed (This extension just spawns goosed which is bundled with the Desktop App)
+You need have Goose Desktop installed (This extension just spawns `goosed` and uses the API which is already bundled with the Desktop App)
 
 ## Installation
 
+There are two ways to install the Goose VSCode Extension:
+
+### Method 1: Install from GitHub Releases
+
+1. Go to the [GitHub Releases page](https://github.com/cloud-on-prem/goose/releases)
+2. Find the latest release with the tag `vscode-v*`
+3. Download the `.vsix` file
+4. In VS Code, go to the Extensions view (Ctrl+Shift+X)
+5. Click on the "..." menu at the top of the Extensions view
+6. Select "Install from VSIX..."
+7. Locate and select the downloaded `.vsix` file
+8. Restart VS Code if prompted
+
+### Method 2: Install from VS Code Marketplace (Coming soon)
+
+The extension will be available in the VS Code Marketplace in the future.
 
 ### Chat Interface
 
