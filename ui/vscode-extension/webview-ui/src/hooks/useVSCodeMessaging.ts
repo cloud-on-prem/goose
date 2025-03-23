@@ -31,8 +31,7 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
     const [intermediateText, setIntermediateText] = useState<string | null>(null);
     const [codeReferences, setCodeReferences] = useState<CodeReference[]>([]);
     const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
-    // Unused state, renamed with underscore prefix
-    const [_processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
+    const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
 
     const vscode = getVSCodeAPI();
 
@@ -145,7 +144,23 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
             switch (message.command) {
                 case MessageType.CHAT_RESPONSE:
                     if (message.message) {
-                        setMessages(prev => [...prev, message.message]);
+                        // Skip if this message has already been processed to avoid duplicates
+                        if (message.message.id && processedMessageIds.has(message.message.id)) {
+                            console.log('Skipping duplicate message:', message.message.id);
+                            return;
+                        }
+
+                        // Add the message ID to processed set
+                        if (message.message.id) {
+                            setProcessedMessageIds(prev => {
+                                const newSet = new Set(prev);
+                                newSet.add(message.message.id);
+                                return newSet;
+                            });
+                        }
+
+                        // Now add the message to the state
+                        safeguardedSetMessages(prev => [...prev, message.message]);
                     }
                     break;
                 case MessageType.SERVER_STATUS:
@@ -230,7 +245,9 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         };
     }, [
         sendHelloMessage,
-        getWorkspaceContext
+        getWorkspaceContext,
+        processedMessageIds,
+        safeguardedSetMessages
     ]);
 
     return {
