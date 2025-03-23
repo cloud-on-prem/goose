@@ -4,7 +4,6 @@ import { MessageContentRenderer } from './MessageContent';
 
 interface MessageProps {
     message: MessageType;
-    isFirstInGroup: boolean;
     copiedMessageId: string | null;
     onCopyMessage: (message: MessageType) => void;
 }
@@ -12,7 +11,6 @@ interface MessageProps {
 // Wrap in memo to prevent unnecessary rerenders
 const Message: React.FC<MessageProps> = memo(({
     message,
-    isFirstInGroup,
     copiedMessageId,
     onCopyMessage
 }) => {
@@ -38,36 +36,35 @@ const Message: React.FC<MessageProps> = memo(({
         return null;
     }
 
-    return (
-        <div className={`message-group ${isFirstInGroup ? 'first-in-group' : ''}`}>
-            {isFirstInGroup && (
-                <div className="vscode-message-group-header">
-                    <div className="vscode-message-group-role">
-                        {isUser ? 'You' : 'Goose'}
-                    </div>
-                    <div className="vscode-message-group-time">
-                        {(() => {
-                            // Ensure consistent timestamp handling
-                            const timestamp = typeof message.created === 'number' ?
-                                message.created : // If it's already a number, use it
-                                new Date(message.created).getTime(); // Otherwise convert string to number
+    // Format timestamp
+    const formatTime = () => {
+        const timestamp = typeof message.created === 'number' ?
+            message.created : // If it's already a number, use it
+            new Date(message.created).getTime(); // Otherwise convert string to number
 
-                            return new Date(timestamp).toLocaleTimeString(navigator.language, {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false,
-                                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                            });
-                        })()}
-                    </div>
+        return new Date(timestamp).toLocaleTimeString(navigator.language, {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
+    };
+
+    return (
+        <div className="message-container">
+            <div className="message-header">
+                <div className="message-role">
+                    {isUser ? 'You' : 'Goose'}
                 </div>
-            )}
+                <div className="message-time">
+                    {formatTime()}
+                </div>
+            </div>
 
             <div className={`message ${isUser ? 'user' : 'ai'}`}>
                 <div className="message-content">
                     {isUser ? (
                         <div className="message-text">
-                            <div className="message-role">You</div>
                             {messageText && messageText.trim() !== '' ? (
                                 messageText
                             ) : (

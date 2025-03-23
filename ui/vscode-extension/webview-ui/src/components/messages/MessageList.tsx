@@ -111,11 +111,6 @@ const MessageList: React.FC<MessageListProps> = ({
     return (
         <div className="message-list">
             {filteredMessages.map((message, index) => {
-                // Create a group for consecutive messages from the same sender
-                // Use filtered message array for prev message reference
-                const prevMessage = index > 0 ? filteredMessages[index - 1] : null;
-                const isFirstInGroup = !prevMessage || prevMessage.role !== message.role;
-
                 // Generate a stable key for the message
                 const messageKey = message.id || `msg_${index}_${message.role}_${message.created || Date.now()}`;
 
@@ -123,7 +118,6 @@ const MessageList: React.FC<MessageListProps> = ({
                     <Message
                         key={messageKey}
                         message={message}
-                        isFirstInGroup={isFirstInGroup}
                         copiedMessageId={copiedMessageId}
                         onCopyMessage={onCopyMessage}
                     />

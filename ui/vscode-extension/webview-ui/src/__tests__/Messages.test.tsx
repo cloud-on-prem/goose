@@ -19,11 +19,16 @@ describe('Message Functionality', () => {
             };
 
             render(
-                <div className="message user">
-                    <div className="message-content">
+                <div className="message-container">
+                    <div className="message-header">
                         <div className="message-role">You</div>
-                        <div className="message-text">
-                            {userMessage.content[0].text}
+                        <div className="message-time">12:34</div>
+                    </div>
+                    <div className="message user">
+                        <div className="message-content">
+                            <div className="message-text">
+                                {userMessage.content[0].text}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -45,11 +50,16 @@ describe('Message Functionality', () => {
             };
 
             render(
-                <div className="message ai">
-                    <div className="message-content">
+                <div className="message-container">
+                    <div className="message-header">
                         <div className="message-role">Goose</div>
-                        <div className="message-text markdown">
-                            {assistantMessage.content[0].text}
+                        <div className="message-time">12:35</div>
+                    </div>
+                    <div className="message ai">
+                        <div className="message-content">
+                            <div className="message-text markdown">
+                                {assistantMessage.content[0].text}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -75,10 +85,16 @@ export default MyComponent;
       `;
 
             render(
-                <div className="message ai">
-                    <div className="message-content">
-                        <div className="message-text markdown">
-                            {markdownWithCode}
+                <div className="message-container">
+                    <div className="message-header">
+                        <div className="message-role">Goose</div>
+                        <div className="message-time">12:36</div>
+                    </div>
+                    <div className="message ai">
+                        <div className="message-content">
+                            <div className="message-text markdown">
+                                {markdownWithCode}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -90,16 +106,16 @@ export default MyComponent;
         });
     });
 
-    describe('Message Groups', () => {
-        it('renders a message group with header', () => {
+    describe('Message Display', () => {
+        it('renders message with header showing role and time', () => {
             const now = Date.now();
             const time = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             render(
-                <div className="message-group first-in-group">
-                    <div className="vscode-message-group-header">
-                        <div className="vscode-message-group-role">You</div>
-                        <div className="vscode-message-group-time">{time}</div>
+                <div className="message-container">
+                    <div className="message-header">
+                        <div className="message-role">You</div>
+                        <div className="message-time">{time}</div>
                     </div>
                     <div className="message user">
                         <div className="message-content">
@@ -116,11 +132,12 @@ export default MyComponent;
 
         it('renders multiple messages in a conversation flow', () => {
             render(
-                <div className="message-container">
+                <div className="message-list">
                     {/* User message */}
-                    <div className="message-group first-in-group">
-                        <div className="vscode-message-group-header">
-                            <div className="vscode-message-group-role">You</div>
+                    <div className="message-container">
+                        <div className="message-header">
+                            <div className="message-role">You</div>
+                            <div className="message-time">12:30</div>
                         </div>
                         <div className="message user">
                             <div className="message-content">
@@ -130,9 +147,10 @@ export default MyComponent;
                     </div>
 
                     {/* AI response */}
-                    <div className="message-group first-in-group">
-                        <div className="vscode-message-group-header">
-                            <div className="vscode-message-group-role">Goose</div>
+                    <div className="message-container">
+                        <div className="message-header">
+                            <div className="message-role">Goose</div>
+                            <div className="message-time">12:31</div>
                         </div>
                         <div className="message ai">
                             <div className="message-content">
@@ -142,9 +160,10 @@ export default MyComponent;
                     </div>
 
                     {/* Follow-up user message */}
-                    <div className="message-group first-in-group">
-                        <div className="vscode-message-group-header">
-                            <div className="vscode-message-group-role">You</div>
+                    <div className="message-container">
+                        <div className="message-header">
+                            <div className="message-role">You</div>
+                            <div className="message-time">12:32</div>
                         </div>
                         <div className="message user">
                             <div className="message-content">
@@ -172,10 +191,16 @@ export default MyComponent;
       `;
 
             render(
-                <div className="message ai">
-                    <div className="message-content">
-                        <div className="message-text markdown">
-                            {markdownText}
+                <div className="message-container">
+                    <div className="message-header">
+                        <div className="message-role">Goose</div>
+                        <div className="message-time">12:40</div>
+                    </div>
+                    <div className="message ai">
+                        <div className="message-content">
+                            <div className="message-text markdown">
+                                {markdownText}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -192,18 +217,16 @@ export default MyComponent;
     describe('Empty and Loading States', () => {
         it('renders empty state when no messages', () => {
             render(
-                <div className="message-container">
+                <div className="message-list empty-message-list">
                     <div className="empty-state">
-                        <div className="empty-state-content">
-                            <h3>No messages yet</h3>
-                            <p>Start a conversation with Goose to get help with your code.</p>
-                        </div>
+                        <h2>Ask me something about your code</h2>
+                        <p>I'll help you understand your codebase, write tests, fix bugs, and more.</p>
                     </div>
                 </div>
             );
 
-            expect(screen.getByText('No messages yet')).toBeInTheDocument();
-            expect(screen.getByText('Start a conversation with Goose to get help with your code.')).toBeInTheDocument();
+            expect(screen.getByText('Ask me something about your code')).toBeInTheDocument();
+            expect(screen.getByText('I\'ll help you understand your codebase, write tests, fix bugs, and more.')).toBeInTheDocument();
         });
 
         it('renders loading state during message generation', () => {
