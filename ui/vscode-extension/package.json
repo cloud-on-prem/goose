@@ -2,7 +2,7 @@
   "name": "goose-vscode",
   "displayName": "Goose",
   "description": "Goose AI for VSCode",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/block/goose"
@@ -124,9 +124,11 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "package": "npm run clean && npm run test && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "package": "npm run clean && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "package:dist": "npm run clean && mkdir -p dist && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn -o dist/goose-vscode-$npm_package_version.vsix",
     "package:skip-tests": "npm run clean && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn",
     "package:inspect": "npx @vscode/vsce ls --no-yarn",
+    "package:verify": "npx @vscode/vsce ls --tree",
     "compile": "tsc -p ./ && npm run build-webview",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
@@ -134,7 +136,7 @@
     "test": "vscode-test",
     "build-webview": "cd webview-ui && npm run build",
     "dev-webview": "cd webview-ui && npm run dev",
-    "clean": "rimraf out && rimraf webview-ui/dist && rimraf *.vsix"
+    "clean": "rimraf out && rimraf webview-ui/dist && rimraf *.vsix && rimraf dist"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

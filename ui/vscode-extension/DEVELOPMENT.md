@@ -191,3 +191,86 @@ For testing the webview UI components:
 
 1. Navigate to the webview directory: `cd webview-ui`
 2. Run type-checking: `npm run type-check`
+
+## Packaging and Releasing
+
+### Packaging the Extension
+
+The extension can be packaged into a `.vsix` file for distribution. There are several npm scripts available for packaging:
+
+- `npm run package` - Runs tests, then packages the extension
+- `npm run package:dist` - Runs tests, then packages the extension into the `dist` directory with version number
+- `npm run package:skip-tests` - Skips tests and packages the extension
+
+To package the extension for distribution:
+
+```bash
+cd ui/vscode-extension
+npm run package:dist
+```
+
+This will create a `.vsix` file in the `dist` directory with the name `goose-vscode-[version].vsix`.
+
+### Using the Release Script
+
+A helper script is provided to simplify the release process:
+
+```bash
+cd ui/vscode-extension
+./scripts/release.sh 0.1.0  # Replace with your desired version
+```
+
+This script:
+1. Updates the version in `package.json`
+2. Packages the extension to the `dist` directory
+3. Provides instructions for creating a Git tag and pushing to GitHub
+
+### GitHub Release Workflow
+
+The repository includes a GitHub Actions workflow that automatically builds and releases the extension when a tag with the format `vscode-v*` is pushed to the repository.
+
+The workflow:
+1. Checks out the code
+2. Sets up Node.js
+3. Installs dependencies
+4. Builds and packages the extension
+5. Creates a GitHub release with the packaged extension attached
+
+#### Releasing with Protected Branches
+
+Since direct commits to the main branch are restricted, follow this process for releases:
+
+1. Create a feature branch for the version update:
+   ```bash
+   git checkout -b release/vscode-v0.1.0
+   ```
+
+2. Update the version in `package.json` and make any other necessary changes
+   ```bash
+   cd ui/vscode-extension
+   ./scripts/release.sh 0.1.0  # Creates the package and updates version
+   ```
+
+3. Commit the changes:
+   ```bash
+   git add .
+   git commit -m "Bump vscode extension to v0.1.0"
+   ```
+
+4. Create a pull request and get it reviewed/approved
+
+5. After the PR is merged to main, checkout the main branch and pull the latest changes:
+   ```bash
+   git checkout main
+   git pull
+   ```
+
+6. Create and push the tag from the main branch:
+   ```bash
+   git tag vscode-v0.1.0
+   git push origin vscode-v0.1.0
+   ```
+
+This will trigger the GitHub workflow to create a release with the packaged extension.
+
+The workflow can also be triggered manually from the GitHub Actions tab, where you can specify the version to release.
