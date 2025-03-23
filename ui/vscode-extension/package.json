@@ -22,7 +22,7 @@
         {
           "id": "goose",
           "title": "Goose",
-          "icon": "resources/goose-icon.svg"
+          "icon": "resources/goose-icon-dark.svg"
         }
       ]
     },
