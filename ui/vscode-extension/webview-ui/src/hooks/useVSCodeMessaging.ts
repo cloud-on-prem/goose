@@ -1,42 +1,55 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getVSCodeAPI } from '../utils/vscode';
+import { MessageType } from '../types';
 import {
     Message,
-    MessageType,
-    CodeReference,
-    WorkspaceContext
-} from '../types';
+    Role,
+    TextContent,
+    MessageContent
+} from '../../../src/shared/types/messages';
+
+// Extend Message type to include system role and sessionId
+interface ExtendedMessage extends Omit<Message, 'role' | 'content'> {
+    role: Role | 'system';
+    content: MessageContent[];
+    sessionId?: string | null;
+}
+
+// Helper function to check if content is TextContent
+function isTextContent(content: MessageContent): content is TextContent {
+    return content.type === 'text';
+}
 
 // Unused type, renamed with underscore prefix
 type _MessageHandler = (message: any) => void;
 
 interface UseVSCodeMessagingResult {
-    messages: Message[];
+    messages: ExtendedMessage[];
     serverStatus: string;
     isLoading: boolean;
     intermediateText: string | null;
     currentMessageId: string | null;
-    codeReferences: CodeReference[];
-    workspaceContext: WorkspaceContext | null;
-    sendChatMessage: (text: string, refs: CodeReference[], sessionId: string | null) => void;
+    codeReferences: any[]; // TODO: Import proper type
+    workspaceContext: any | null; // TODO: Import proper type
+    sendChatMessage: (text: string, refs: any[], sessionId: string | null) => void;
     stopGeneration: () => void;
     getWorkspaceContext: () => void;
 }
 
 export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<ExtendedMessage[]>([]);
     const [serverStatus, setServerStatus] = useState<string>('stopped');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
     const [intermediateText, setIntermediateText] = useState<string | null>(null);
-    const [codeReferences, setCodeReferences] = useState<CodeReference[]>([]);
-    const [workspaceContext, setWorkspaceContext] = useState<WorkspaceContext | null>(null);
+    const [codeReferences, setCodeReferences] = useState<any[]>([]);
+    const [workspaceContext, setWorkspaceContext] = useState<any | null>(null);
     const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
 
     const vscode = getVSCodeAPI();
 
     // Safely update messages state with error handling
-    const safeguardedSetMessages = useCallback((updater: React.SetStateAction<Message[]>) => {
+    const safeguardedSetMessages = useCallback((updater: React.SetStateAction<ExtendedMessage[]>) => {
         try {
             setMessages(updater);
         } catch (err) {
@@ -55,7 +68,7 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
     // Send a chat message
     const sendChatMessage = useCallback((
         text: string,
-        refs: CodeReference[],
+        refs: any[],
         sessionId: string | null
     ) => {
         if (!text.trim() && refs.length === 0) {
@@ -63,15 +76,16 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         }
 
         // Check server status before sending
-        if (serverStatus === 'stopped') {
-            const errorMessage: Message = {
+        if (serverStatus !== 'running') {
+            const errorMessage: ExtendedMessage = {
                 id: `error_${Date.now()}`,
                 role: 'system',
                 created: Date.now(),
                 content: [{
                     type: 'text',
                     text: '❌ Cannot send message: Goose server is not connected. Please restart VS Code and try again.'
-                }]
+                }],
+                sessionId: sessionId
             };
             safeguardedSetMessages(prev => [...prev, errorMessage]);
             return;
@@ -105,7 +119,7 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         }
 
         // Create a user message object with all content
-        const userMessage: Message = {
+        const userMessage: ExtendedMessage = {
             id: messageId,
             role: 'user',
             created: Date.now(),
@@ -176,11 +190,10 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                         }
 
                         // Get a content summary for comparison
-                        const getContentSummary = (msg: any) => {
+                        const getContentSummary = (msg: ExtendedMessage) => {
                             if (!msg.content || !Array.isArray(msg.content)) return '';
-                            return msg.content.map((item: any) => {
-                                if (item.type === 'text') return item.text || '';
-                                if (item.type === 'toolRequest') return item.id || '';
+                            return msg.content.map(item => {
+                                if (isTextContent(item)) return item.text || '';
                                 return '';
                             }).join('|');
                         };
@@ -243,39 +256,73 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                         setIntermediateText(message.content);
                     }
                     break;
+                case MessageType.GENERATION_FINISHED:
+                    console.log('Generation finished event received');
+                    // Explicitly clear loading state and intermediate text
+                    setIsLoading(false);
+                    setIntermediateText(null);
+                    setCurrentMessageId(null);
+                    break;
                 case MessageType.SERVER_STATUS:
                     if (message.status) {
+                        console.log('Updating server status:', message.status);
                         setServerStatus(message.status);
                     }
                     break;
-                case MessageType.GENERATION_FINISHED:
-                    setIsLoading(false);
-                    setIntermediateText(null);
-                    break;
-                case MessageType.WORKSPACE_CONTEXT:
-                    if (message.context) {
-                        setWorkspaceContext(message.context);
-                    }
+                case MessageType.SERVER_EXIT:
+                    console.log('Server process exited with code:', message.code);
+                    setServerStatus('stopped');
+                    const exitMessage: ExtendedMessage = {
+                        id: `server_exit_${Date.now()}`,
+                        role: 'system',
+                        created: Date.now(),
+                        content: [{
+                            type: 'text',
+                            text: `⚠️ The Goose server process has exited${message.code ? ` with code ${message.code}` : ''}.`
+                        }],
+                        sessionId: message.sessionId
+                    };
+                    safeguardedSetMessages(prev => [...prev, exitMessage]);
                     break;
                 case MessageType.ERROR:
-                    console.error('Error from extension:', message.errorMessage);
-                    // Update server status to stopped when we get fetch errors
-                    if (message.errorMessage?.includes('fetch failed')) {
+                    if (message.errorMessage) {
+                        console.error('Error from extension:', message.errorMessage);
+                        console.log('Connection error detected, updating server status to stopped');
                         setServerStatus('stopped');
 
-                        // Add error message to chat
-                        const errorMessage: Message = {
-                            id: `error_${Date.now()}`,
-                            role: 'system',
-                            created: Date.now(),
-                            content: [{
-                                type: 'text',
-                                text: '❌ Failed to connect to Goose server. Please ensure the server is running and try again.'
-                            }]
-                        };
-                        safeguardedSetMessages(prev => [...prev, errorMessage]);
+                        // Check for recent error messages to prevent duplicates
+                        const recentErrorMessage = messages[messages.length - 1];
+                        const isRecentError = recentErrorMessage &&
+                            recentErrorMessage.role === 'system' &&
+                            recentErrorMessage.content.some(c =>
+                                isTextContent(c) && c.text.includes('Failed to connect to Goose server')
+                            ) &&
+                            Date.now() - recentErrorMessage.created < 1000;
+
+                        if (!isRecentError) {
+                            const errorMessage: ExtendedMessage = {
+                                id: `error_${Date.now()}`,
+                                role: 'system',
+                                created: Date.now(),
+                                content: [{
+                                    type: 'text',
+                                    text: '❌ Failed to connect to Goose server. Please check if the server is running.'
+                                }],
+                                sessionId: message.sessionId
+                            };
+                            safeguardedSetMessages(prev => {
+                                // Double check for duplicates before adding
+                                const isDuplicate = prev.some(msg =>
+                                    msg.role === 'system' &&
+                                    msg.content.some(c =>
+                                        isTextContent(c) && c.text.includes('Failed to connect to Goose server')
+                                    ) &&
+                                    Date.now() - msg.created < 1000
+                                );
+                                return isDuplicate ? prev : [...prev, errorMessage];
+                            });
+                        }
                     }
-                    setIsLoading(false);
                     break;
                 case MessageType.ADD_CODE_REFERENCE:
                     if (message.codeReference) {
@@ -292,6 +339,12 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                     if (message.id) {
                         console.log('Removing code reference:', message.id);
                         setCodeReferences(prev => prev.filter(ref => ref.id !== message.id));
+                    }
+                    break;
+                case MessageType.WORKSPACE_CONTEXT:
+                    if (message.context) {
+                        console.log('Received workspace context:', message.context);
+                        setWorkspaceContext(message.context);
                     }
                     break;
                 case MessageType.SESSION_LOADED:
@@ -323,7 +376,8 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                                     id: msg.id || `msg_${Math.random().toString(36).substr(2, 9)}`,
                                     role: msg.role || 'unknown',
                                     created: msg.created || Date.now(),
-                                    content: Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: 'Message content unavailable' }]
+                                    content: Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: 'Message content unavailable' }],
+                                    sessionId: msg.sessionId
                                 }));
 
                             console.log(`Loading ${validMessages.length} messages`);
@@ -334,7 +388,8 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                     }, 100); // Slight delay to ensure React has time to process state changes
                     break;
                 default:
-                    break;
+                    // Handle unknown message types
+                    console.warn('Unknown message type:', message.command);
             }
         };
 

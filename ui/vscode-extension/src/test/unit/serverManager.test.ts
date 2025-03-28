@@ -56,13 +56,16 @@ suite('ServerManager Tests', () => {
 
         // Mock the startGoosed function
         startGoosedStub = sandbox.stub(gooseServer, 'startGoosed');
+
+        // Create a proper mock process that extends EventEmitter
+        const mockProcess = new EventEmitter();
+        (mockProcess as any).kill = sandbox.stub();
+        (mockProcess as any).pid = 12345;
+
         startGoosedStub.resolves({
             port: 8000,
             workingDir: '/test/workspace',
-            process: {
-                kill: sandbox.stub(),
-                pid: 12345
-            } as any,
+            process: mockProcess,
             secretKey: 'test-secret-key'
         });
 
@@ -142,8 +145,8 @@ suite('ServerManager Tests', () => {
     });
 
     test('should handle errors during server start', async () => {
-        // Make workspace folders return empty to test error handling
-        workspaceFoldersStub.value([]);
+        // Create a realistic error scenario by making the getWorkspaceDirectory method throw
+        sandbox.stub(serverManager as any, 'getWorkspaceDirectory').throws(new Error('Workspace directory error'));
 
         // Spy on error events
         const errorListener = sandbox.spy();
@@ -181,5 +184,101 @@ suite('ServerManager Tests', () => {
 
         // Error event should be emitted
         sinon.assert.called(errorListener);
+    });
+
+    test('should handle server process exit', async () => {
+        // Start the server
+        await serverManager.start();
+
+        // Spy on server exit events
+        const exitListener = sandbox.spy();
+        serverManager.on(ServerEvents.SERVER_EXIT, exitListener);
+
+        // Spy on status change events
+        const statusChangeListener = sandbox.spy();
+        serverManager.on(ServerEvents.STATUS_CHANGE, statusChangeListener);
+
+        // Simulate server process exit
+        const serverProcess = (serverManager as any).serverInfo.process;
+        serverProcess.emit('close', 0);
+
+        // Verify exit event was emitted with correct code
+        sinon.assert.calledWith(exitListener, 0);
+
+        // Verify status was changed to stopped
+        sinon.assert.calledWith(statusChangeListener, ServerStatus.STOPPED);
+
+        // Verify server status is stopped
+        assert.strictEqual(serverManager.getStatus(), ServerStatus.STOPPED);
+    });
+
+    test('should handle server process crash', async () => {
+        // Start the server
+        await serverManager.start();
+
+        // Spy on server exit events
+        const exitListener = sandbox.spy();
+        serverManager.on(ServerEvents.SERVER_EXIT, exitListener);
+
+        // Spy on status change events
+        const statusChangeListener = sandbox.spy();
+        serverManager.on(ServerEvents.STATUS_CHANGE, statusChangeListener);
+
+        // Simulate server process crash
+        const serverProcess = (serverManager as any).serverInfo.process;
+        serverProcess.emit('close', 1);
+
+        // Verify exit event was emitted with error code
+        sinon.assert.calledWith(exitListener, 1);
+
+        // Verify status was changed to stopped
+        sinon.assert.calledWith(statusChangeListener, ServerStatus.STOPPED);
+
+        // Verify server status is stopped
+        assert.strictEqual(serverManager.getStatus(), ServerStatus.STOPPED);
+    });
+
+    test('should handle server process exit with null code', async () => {
+        // Start the server
+        await serverManager.start();
+
+        // Spy on server exit events
+        const exitListener = sandbox.spy();
+        serverManager.on(ServerEvents.SERVER_EXIT, exitListener);
+
+        // Spy on status change events
+        const statusChangeListener = sandbox.spy();
+        serverManager.on(ServerEvents.STATUS_CHANGE, statusChangeListener);
+
+        // Simulate server process exit with null code (killed)
+        const serverProcess = (serverManager as any).serverInfo.process;
+        serverProcess.emit('close', null);
+
+        // Verify exit event was emitted with null code
+        sinon.assert.calledWith(exitListener, null);
+
+        // Verify status was changed to stopped
+        sinon.assert.calledWith(statusChangeListener, ServerStatus.STOPPED);
+
+        // Verify server status is stopped
+        assert.strictEqual(serverManager.getStatus(), ServerStatus.STOPPED);
+    });
+
+    test('should not emit server exit event when stopping server manually', async () => {
+        // Start the server
+        await serverManager.start();
+
+        // Spy on server exit events
+        const exitListener = sandbox.spy();
+        serverManager.on(ServerEvents.SERVER_EXIT, exitListener);
+
+        // Stop the server manually
+        serverManager.stop();
+
+        // Verify no exit event was emitted
+        sinon.assert.notCalled(exitListener);
+
+        // Verify server status is stopped
+        assert.strictEqual(serverManager.getStatus(), ServerStatus.STOPPED);
     });
 }); 

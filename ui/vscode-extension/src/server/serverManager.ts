@@ -22,7 +22,8 @@ export enum ServerStatus {
 export enum ServerEvents {
     STATUS_CHANGE = 'statusChange',
     ERROR = 'error',
-    MESSAGE = 'message'
+    MESSAGE = 'message',
+    SERVER_EXIT = 'serverExit'
 }
 
 /**
@@ -61,40 +62,10 @@ export class ServerManager {
         this.setStatus(ServerStatus.STARTING);
         console.log('Starting Goose server...');
 
-        // Get the binary path
-        const binaryPath = this.getBinaryPath();
-        console.log(`Using binary at: ${binaryPath}`);
-
-        // Get workspace directory to start goosed in
-        const workspaceDirectory = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-
-        if (!workspaceDirectory) {
-            console.error('No workspace folder found');
-            this.setStatus(ServerStatus.ERROR);
-            this.eventEmitter.emit(ServerEvents.ERROR, new Error('No workspace folder found'));
-            return false;
-        }
-
-        console.log(`Starting goosed in workspace directory: ${workspaceDirectory}`);
-
-        // Start the server process
-        const options: cp.SpawnOptions = {
-            cwd: workspaceDirectory,
-            env: {
-                ...process.env,
-                // Set the workspace directory for goosed to operate in
-                GOOSE_WORKSPACE_DIR: workspaceDirectory
-            },
-            detached: false
-        };
-
-        // Start the server process
-        this.serverProcess = cp.spawn(binaryPath, ['agent'], options);
-
         try {
             // Configure and start the server
             const serverConfig: GooseServerConfig = {
-                workingDir: workspaceDirectory,
+                workingDir: this.getWorkspaceDirectory(),
                 getBinaryPath: (binaryName: string) => getBinaryPath(this.context, binaryName),
                 logger: {
                     info: (message: string, ...args: any[]) => console.info(`[GooseServer] ${message}`, ...args),
@@ -105,6 +76,13 @@ export class ServerManager {
             };
 
             this.serverInfo = await startGoosed(serverConfig);
+
+            // Set up process exit handler
+            this.serverInfo.process.on('close', (code) => {
+                console.log(`Server process exited with code ${code}`);
+                this.setStatus(ServerStatus.STOPPED);
+                this.eventEmitter.emit(ServerEvents.SERVER_EXIT, code);
+            });
 
             // Create API client for the server
             this.apiClient = new ApiClient({
@@ -337,5 +315,11 @@ export class ServerManager {
     private getBinaryPath(): string {
         // Use the utility function to get the binary path
         return getBinaryPath(this.context, 'goosed');
+    }
+
+    private getWorkspaceDirectory(): string {
+        // Implement the logic to get the workspace directory
+        // This is a placeholder and should be replaced with the actual implementation
+        return process.cwd();
     }
 } 

@@ -5,6 +5,7 @@ export enum MessageType {
     ACTIVE_EDITOR_CONTENT = 'activeEditorContent',
     ERROR = 'error',
     SERVER_STATUS = 'serverStatus',
+    SERVER_EXIT = 'serverExit',
     CHAT_MESSAGE = 'chatMessage',
     SEND_CHAT_MESSAGE = 'sendChatMessage',
     AI_MESSAGE = 'aiMessage',
