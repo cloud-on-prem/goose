@@ -62,6 +62,21 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
             return;
         }
 
+        // Check server status before sending
+        if (serverStatus === 'stopped') {
+            const errorMessage: Message = {
+                id: `error_${Date.now()}`,
+                role: 'system',
+                created: Date.now(),
+                content: [{
+                    type: 'text',
+                    text: '❌ Cannot send message: Goose server is not connected. Please restart VS Code and try again.'
+                }]
+            };
+            safeguardedSetMessages(prev => [...prev, errorMessage]);
+            return;
+        }
+
         // Log the session ID for debugging
         console.log('Sending message with sessionId:', sessionId);
 
@@ -116,7 +131,7 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         setIsLoading(true);
         setCurrentMessageId(messageId);
         setIntermediateText(null); // Clear any previous intermediate text
-    }, [vscode, safeguardedSetMessages]);
+    }, [vscode, safeguardedSetMessages, serverStatus]);
 
     // Stop AI generation
     const stopGeneration = useCallback(() => {
@@ -244,7 +259,22 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                     break;
                 case MessageType.ERROR:
                     console.error('Error from extension:', message.errorMessage);
-                    // Optionally show an error notification or add an error message to chat
+                    // Update server status to stopped when we get fetch errors
+                    if (message.errorMessage?.includes('fetch failed')) {
+                        setServerStatus('stopped');
+
+                        // Add error message to chat
+                        const errorMessage: Message = {
+                            id: `error_${Date.now()}`,
+                            role: 'system',
+                            created: Date.now(),
+                            content: [{
+                                type: 'text',
+                                text: '❌ Failed to connect to Goose server. Please ensure the server is running and try again.'
+                            }]
+                        };
+                        safeguardedSetMessages(prev => [...prev, errorMessage]);
+                    }
                     setIsLoading(false);
                     break;
                 case MessageType.ADD_CODE_REFERENCE:
@@ -310,9 +340,13 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
 
         window.addEventListener('message', handleMessage);
 
-        // Set up a timer to periodically refresh the context
+        // Set up a timer to periodically refresh the context and check server status
         const timer = setInterval(() => {
             getWorkspaceContext();
+            // Check server status periodically
+            vscode.postMessage({
+                command: MessageType.GET_SERVER_STATUS
+            });
         }, 30000); // Every 30 seconds
 
         // Clean up event listener and timer
