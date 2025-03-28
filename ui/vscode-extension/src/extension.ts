@@ -36,7 +36,8 @@ enum MessageType {
 	CREATE_SESSION = 'createSession',
 	RENAME_SESSION = 'renameSession',
 	DELETE_SESSION = 'deleteSession',
-	GET_SESSIONS = 'getSessions'
+	GET_SESSIONS = 'getSessions',
+	SERVER_EXIT = 'serverExit'
 }
 
 // Interface for messages sent between extension and webview
@@ -577,6 +578,17 @@ export function activate(context: vscode.ExtensionContext) {
 			provider.sendMessageToWebview({
 				command: MessageType.SERVER_STATUS,
 				status: status
+			});
+		}
+	});
+
+	// Listen for server exit events
+	serverManager.on('serverExit', (code: number | null) => {
+		console.log(`Extension received server exit with code: ${code}`);
+		if (provider) {
+			provider.sendMessageToWebview({
+				command: MessageType.SERVER_EXIT,
+				code: code
 			});
 		}
 	});
