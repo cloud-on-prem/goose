@@ -247,9 +247,21 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                     // Optionally show an error notification or add an error message to chat
                     setIsLoading(false);
                     break;
+                case MessageType.ADD_CODE_REFERENCE:
+                    if (message.codeReference) {
+                        console.log('Adding code reference from selection:', message.codeReference);
+                        setCodeReferences(prev => [...prev, message.codeReference]);
+                    }
+                    break;
                 case MessageType.CODE_REFERENCE:
                     if (message.reference) {
                         setCodeReferences(prev => [...prev, message.reference]);
+                    }
+                    break;
+                case MessageType.REMOVE_CODE_REFERENCE:
+                    if (message.id) {
+                        console.log('Removing code reference:', message.id);
+                        setCodeReferences(prev => prev.filter(ref => ref.id !== message.id));
                     }
                     break;
                 case MessageType.SESSION_LOADED:

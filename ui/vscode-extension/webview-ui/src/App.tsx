@@ -13,7 +13,8 @@ import { useVSCodeMessaging } from './hooks/useVSCodeMessaging';
 import { useSessionManagement } from './hooks/useSessionManagement';
 
 // Import types
-import { Message } from './types/index';
+import { Message, MessageType } from './types/index';
+import { getVSCodeAPI } from './utils/vscode';
 
 const App: React.FC = () => {
     // State for UI elements
@@ -94,10 +95,14 @@ const App: React.FC = () => {
 
     // Handler for removing a code reference
     const handleRemoveCodeReference = useCallback((id: string) => {
-        const _updatedReferences = codeReferences.filter(ref => ref.id !== id);
-        // Here we would typically update the extension with the new state
-        // For now we're just updating our local state which doesn't persist
-    }, [codeReferences]);
+        // Sends a message to the extension to remove the code reference
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            command: MessageType.REMOVE_CODE_REFERENCE,
+            id
+        });
+        // The actual state update will happen when the extension sends back a confirmation
+    }, []);
 
     return (
         <div className="container">
