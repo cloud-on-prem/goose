@@ -80,14 +80,8 @@ describe('useVSCodeMessaging', () => {
         // Server status should be stopped
         expect(result.current.serverStatus).toBe('stopped');
 
-        // Should have added an exit message to chat
-        expect(result.current.messages[0]).toMatchObject({
-            role: 'system',
-            content: [{
-                type: 'text',
-                text: expect.stringContaining('server process has exited')
-            }]
-        });
+        // We no longer add system messages for server exit
+        expect(result.current.messages).toHaveLength(0);
     });
 
     it('should handle server error message', () => {
@@ -111,14 +105,8 @@ describe('useVSCodeMessaging', () => {
         // Server status should be stopped
         expect(result.current.serverStatus).toBe('stopped');
 
-        // Should have added an error message to chat
-        expect(result.current.messages[0]).toMatchObject({
-            role: 'system',
-            content: [{
-                type: 'text',
-                text: expect.stringContaining('Failed to connect to Goose server')
-            }]
-        });
+        // We no longer add system messages for server errors
+        expect(result.current.messages).toHaveLength(0);
     });
 
     it('should not show duplicate error messages', () => {
@@ -149,14 +137,8 @@ describe('useVSCodeMessaging', () => {
             });
         });
 
-        // Should only have one error message
-        const errorMessages = result.current.messages.filter(
-            msg => msg.role === 'system' &&
-                msg.content.some(c =>
-                    c.type === 'text' && c.text.includes('Failed to connect to Goose server')
-                )
-        );
-        expect(errorMessages).toHaveLength(1);
+        // Since we no longer add error messages, expect none
+        expect(result.current.messages).toHaveLength(0);
     });
 
     it('should prevent sending messages when server is stopped', () => {

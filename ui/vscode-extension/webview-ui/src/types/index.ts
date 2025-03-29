@@ -14,8 +14,6 @@ export enum MessageType {
     CODE_REFERENCE = 'codeReference',
     ADD_CODE_REFERENCE = 'addCodeReference',
     REMOVE_CODE_REFERENCE = 'removeCodeReference',
-    GET_WORKSPACE_CONTEXT = 'getWorkspaceContext',
-    WORKSPACE_CONTEXT = 'workspaceContext',
     CHAT_RESPONSE = 'chatResponse',
     SESSIONS_LIST = 'sessionsList',
     SESSION_LOADED = 'sessionLoaded',
