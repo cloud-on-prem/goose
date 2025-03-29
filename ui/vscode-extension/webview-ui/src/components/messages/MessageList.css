@@ -52,6 +52,17 @@
 .message-role {
     font-weight: 600;
     color: var(--vscode-editor-foreground);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.message-role .codicon {
+    font-size: 16px;
+}
+
+.message-role .goose-icon {
+    color: var(--vscode-editor-foreground);
 }
 
 .message-time {
