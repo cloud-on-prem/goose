@@ -30,10 +30,8 @@ interface UseVSCodeMessagingResult {
     intermediateText: string | null;
     currentMessageId: string | null;
     codeReferences: any[]; // TODO: Import proper type
-    workspaceContext: any | null; // TODO: Import proper type
     sendChatMessage: (text: string, refs: any[], sessionId: string | null) => void;
     stopGeneration: () => void;
-    getWorkspaceContext: () => void;
     restartServer: () => void;
 }
 
@@ -44,7 +42,6 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
     const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
     const [intermediateText, setIntermediateText] = useState<string | null>(null);
     const [codeReferences, setCodeReferences] = useState<any[]>([]);
-    const [workspaceContext, setWorkspaceContext] = useState<any | null>(null);
     const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
 
     const vscode = getVSCodeAPI();
@@ -156,13 +153,6 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         setIsLoading(false);
     }, [vscode]);
 
-    // Request workspace context
-    const getWorkspaceContext = useCallback(() => {
-        vscode.postMessage({
-            command: MessageType.GET_WORKSPACE_CONTEXT
-        });
-    }, [vscode]);
-
     // Restart the server
     const restartServer = useCallback(() => {
         console.log('Requesting server restart');
@@ -176,7 +166,6 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
     useEffect(() => {
         // Initial setup
         sendHelloMessage();
-        getWorkspaceContext();
 
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
@@ -331,12 +320,6 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                         setCodeReferences(prev => prev.filter(ref => ref.id !== message.id));
                     }
                     break;
-                case MessageType.WORKSPACE_CONTEXT:
-                    if (message.context) {
-                        console.log('Received workspace context:', message.context);
-                        setWorkspaceContext(message.context);
-                    }
-                    break;
                 case MessageType.SESSION_LOADED:
                 case 'sessionLoaded':
                     console.log('Session loaded with ID:', message.sessionId);
@@ -387,8 +370,6 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
 
         // Set up a timer to periodically refresh the context and check server status
         const timer = setInterval(() => {
-            getWorkspaceContext();
-            // Check server status periodically
             vscode.postMessage({
                 command: MessageType.GET_SERVER_STATUS
             });
@@ -401,7 +382,6 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         };
     }, [
         sendHelloMessage,
-        getWorkspaceContext,
         processedMessageIds,
         safeguardedSetMessages,
         serverStatus,
@@ -415,10 +395,8 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         intermediateText,
         currentMessageId,
         codeReferences,
-        workspaceContext,
         sendChatMessage,
         stopGeneration,
-        getWorkspaceContext,
         restartServer
     };
 }; 

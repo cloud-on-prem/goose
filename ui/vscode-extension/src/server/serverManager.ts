@@ -5,6 +5,7 @@ import { ApiClient } from '../shared/server/apiClient';
 import { getBinaryPath } from '../utils/binaryPath';
 import { Message } from '../shared/types';
 import * as cp from 'child_process';
+import * as crypto from 'crypto';
 
 /**
  * Server status options
@@ -36,18 +37,69 @@ export class ServerManager {
     private eventEmitter: EventEmitter;
     private context: vscode.ExtensionContext;
     private extensionEvents: EventEmitter;
-    private readonly secretKey: string = 'goose-vscode-secret-key';
+    private secretKey: string;
     private serverProcess: cp.ChildProcess | null = null;
+    private static readonly SECRET_KEY_STORAGE_KEY = 'goose-server-secret-key';
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.eventEmitter = new EventEmitter();
         this.extensionEvents = new EventEmitter();
 
+        // Get or generate a secret key
+        this.secretKey = this.getOrGenerateSecretKey();
+
         // Register cleanup on extension deactivation
         context.subscriptions.push({
             dispose: () => this.stop()
         });
+    }
+
+    /**
+     * Get the existing secret key from storage or generate a new one
+     */
+    private getOrGenerateSecretKey(): string {
+        // Try to get the key from storage
+        const existingKey = this.context.globalState.get<string>(ServerManager.SECRET_KEY_STORAGE_KEY);
+
+        if (existingKey) {
+            console.log('Using existing secret key from storage');
+            return existingKey;
+        }
+
+        // Generate a new random key
+        console.log('Generating new random secret key');
+        const newKey = this.generateSecretKey();
+
+        // Store it for future use
+        this.context.globalState.update(ServerManager.SECRET_KEY_STORAGE_KEY, newKey);
+        console.log('Generated and stored new secret key');
+
+        return newKey;
+    }
+
+    /**
+     * Generate a secure random secret key
+     */
+    private generateSecretKey(): string {
+        // Create a random string of 32 characters
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+
+        try {
+            const randomBytes = crypto.randomBytes(32);
+            for (let i = 0; i < randomBytes.length; i++) {
+                result += chars[randomBytes[i] % chars.length];
+            }
+        } catch (error) {
+            // Fallback if crypto fails
+            console.error('Error generating random bytes, using fallback:', error);
+            for (let i = 0; i < 32; i++) {
+                result += chars[Math.floor(Math.random() * chars.length)];
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -61,6 +113,11 @@ export class ServerManager {
 
         this.setStatus(ServerStatus.STARTING);
         console.log('Starting Goose server...');
+
+        // Log partial secret key for debugging (without revealing the full key)
+        const keyPrefix = this.secretKey.substring(0, 4);
+        const keySuffix = this.secretKey.substring(this.secretKey.length - 4);
+        console.log(`Using secret key: ${keyPrefix}...${keySuffix} (${this.secretKey.length} chars)`);
 
         try {
             // Configure and start the server
@@ -270,7 +327,7 @@ export class ServerManager {
     }
 
     /**
-     * Get the secret key used for authentication
+     * Get the secret key
      */
     public getSecretKey(): string {
         return this.secretKey;

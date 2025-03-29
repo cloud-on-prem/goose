@@ -5,8 +5,6 @@ import { Header } from './components/Header';
 import { SessionList } from './components/SessionList';
 import MessageList from './components/messages/MessageList';
 import { ChatInput } from './components/input/ChatInput';
-import { ContextInfoButton } from './components/context/ContextInfoButton';
-import { ContextInfoPanel } from './components/context/ContextInfoPanel';
 
 // Import hooks
 import { useVSCodeMessaging } from './hooks/useVSCodeMessaging';
@@ -19,7 +17,6 @@ import { getVSCodeAPI } from './utils/vscode';
 const App: React.FC = () => {
     // State for UI elements
     const [inputMessage, setInputMessage] = useState<string>('');
-    const [showContextInfo, setShowContextInfo] = useState<boolean>(false);
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
     // Use the VS Code messaging hook
@@ -29,7 +26,6 @@ const App: React.FC = () => {
         isLoading,
         intermediateText,
         codeReferences,
-        workspaceContext,
         sendChatMessage,
         stopGeneration,
         restartServer
@@ -145,20 +141,6 @@ const App: React.FC = () => {
                 onStopGeneration={stopGeneration}
                 onRemoveCodeReference={handleRemoveCodeReference}
             />
-
-            {workspaceContext && (
-                <>
-                    <ContextInfoButton
-                        workspaceContext={workspaceContext}
-                        showContextInfo={showContextInfo}
-                        onToggleContextInfo={() => setShowContextInfo(!showContextInfo)}
-                    />
-                    <ContextInfoPanel
-                        workspaceContext={workspaceContext}
-                        showContextInfo={showContextInfo}
-                    />
-                </>
-            )}
         </div>
     );
 };

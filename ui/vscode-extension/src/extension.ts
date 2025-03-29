@@ -173,10 +173,6 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 				this._chatProcessor.stopGeneration();
 				break;
 
-			case MessageType.GET_WORKSPACE_CONTEXT:
-				this._sendWorkspaceContext();
-				break;
-
 			case MessageType.REMOVE_CODE_REFERENCE:
 				// Handle removing a code reference from the UI
 				if (message.id) {
@@ -527,17 +523,6 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 		} else {
 			vscode.window.showInformationMessage('Please select some code first');
 		}
-	}
-
-	/**
-	 * Sends workspace context information to the webview
-	 */
-	private async _sendWorkspaceContext() {
-		const context = await this._workspaceContextProvider.getContext();
-		this._sendMessageToWebview({
-			command: MessageType.WORKSPACE_CONTEXT,
-			context
-		});
 	}
 
 	/**
