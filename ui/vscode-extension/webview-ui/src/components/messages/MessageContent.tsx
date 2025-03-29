@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageContent as MessageContentType } from '../../types/index';
 import { useVSCodeMessaging } from '../../hooks/useVSCodeMessaging';
 import ReactMarkdown from 'react-markdown';
@@ -7,37 +7,14 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import './MessageContent.css';
 
-// Simple function to convert markdown to HTML
-const renderMarkdownAsHTML = (text: string): string => {
-    if (!text) return '';
-
-    // Basic markdown parsing for common elements
-    let html = text
-        // Convert code blocks
-        .replace(/```([a-z]*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-        // Convert inline code
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        // Convert headers
-        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-        // Convert bold
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        // Convert italic
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        // Convert links
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-        // Convert line breaks
-        .replace(/\n/g, '<br>');
-
-    return html;
-};
-
 interface MessageContentProps {
     content: MessageContentType[];
 }
 
 export const MessageContentRenderer: React.FC<MessageContentProps> = ({ content }) => {
+    // State to track which code block has been copied
+    const [copiedCodeBlock, setCopiedCodeBlock] = useState<string | null>(null);
+
     // Get the messaging hooks for actions
     const { restartServer, serverStatus } = useVSCodeMessaging();
 
@@ -51,6 +28,17 @@ export const MessageContentRenderer: React.FC<MessageContentProps> = ({ content 
             default:
                 console.warn('Unknown action:', action);
         }
+    };
+
+    // Handle copying code to clipboard
+    const handleCopyCode = (code: string, blockId: string) => {
+        navigator.clipboard.writeText(code).then(() => {
+            setCopiedCodeBlock(blockId);
+            // Reset after animation completes
+            setTimeout(() => setCopiedCodeBlock(null), 600);
+        }).catch(err => {
+            console.error('Failed to copy code:', err);
+        });
     };
 
     // Check if the server is in a state where restart shouldn't be enabled
@@ -131,16 +119,42 @@ export const MessageContentRenderer: React.FC<MessageContentProps> = ({ content 
                                         // Check if this is a code block (has language class)
                                         const match = /language-(\w+)/.exec(className || '');
                                         const isCodeBlock = !!match;
+                                        const codeContent = String(children).replace(/\n$/, '');
 
-                                        return isCodeBlock ? (
-                                            <SyntaxHighlighter
-                                                language={match ? match[1] : ''}
-                                                style={vscDarkPlus}
-                                                PreTag="div"
-                                            >
-                                                {String(children).replace(/\n$/, '')}
-                                            </SyntaxHighlighter>
-                                        ) : (
+                                        // Create unique id for this code block
+                                        const blockId = `code-block-${index}-${match ? match[1] : 'text'}-${codeContent.length}`;
+                                        const isCopied = copiedCodeBlock === blockId;
+
+                                        if (isCodeBlock) {
+                                            return (
+                                                <div className="code-block-wrapper">
+                                                    <div className="code-block-header">
+                                                        {match && match[1] && (
+                                                            <span className="code-block-language">
+                                                                {match[1]}
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            className={`code-block-copy ${isCopied ? 'copied' : ''}`}
+                                                            onClick={() => handleCopyCode(codeContent, blockId)}
+                                                            title="Copy code"
+                                                        >
+                                                            <i className={`codicon ${isCopied ? 'codicon-check' : 'codicon-copy'}`}></i>
+                                                        </button>
+                                                    </div>
+                                                    <SyntaxHighlighter
+                                                        language={match ? match[1] : ''}
+                                                        style={vscDarkPlus}
+                                                        PreTag="div"
+                                                        className="code-block-content"
+                                                    >
+                                                        {codeContent}
+                                                    </SyntaxHighlighter>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
                                             <code className={className} {...props}>
                                                 {children}
                                             </code>
