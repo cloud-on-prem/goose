@@ -48,6 +48,7 @@
     z-index: 10;
     width: 100%;
     flex-shrink: 0;
+    margin-bottom: 5px;
 }
 
 .vscode-chat-header-content {
@@ -234,7 +235,6 @@
     font-weight: 600;
     margin-bottom: 8px;
     color: var(--vscode-editorLightBulb-foreground, var(--vscode-button-foreground));
-    border-bottom: 1px solid var(--vscode-panel-border);
     padding-bottom: 4px;
 }
 
