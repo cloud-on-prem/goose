@@ -31,6 +31,12 @@ Designed for maximum flexibility, goose works with any LLM and seamlessly integr
 - [Documentation](https://block.github.io/goose/docs/category/getting-started)
 
 
+# Get Goose
+- **Desktop App**: Native application for Mac, Windows, and Linux
+- **CLI**: Run `goose` commands from your terminal
+- **VSCode Extension**: Integrate Goose directly into your editor (in development)
+
+
 # Goose Around with Us
 - [Discord](https://discord.gg/block-opensource)
 - [YouTube](https://www.youtube.com/@blockopensource)

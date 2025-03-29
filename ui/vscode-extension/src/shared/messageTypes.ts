@@ -1,0 +1,27 @@
+// Message types for extension/webview communication
+export enum MessageType {
+    HELLO = 'hello',
+    GET_ACTIVE_EDITOR_CONTENT = 'getActiveEditorContent',
+    ACTIVE_EDITOR_CONTENT = 'activeEditorContent',
+    ERROR = 'error',
+    SERVER_STATUS = 'serverStatus',
+    SERVER_EXIT = 'serverExit',
+    CHAT_MESSAGE = 'chatMessage',
+    SEND_CHAT_MESSAGE = 'sendChatMessage',
+    AI_MESSAGE = 'aiMessage',
+    STOP_GENERATION = 'stopGeneration',
+    GENERATION_FINISHED = 'generationFinished',
+    CODE_REFERENCE = 'codeReference',
+    ADD_CODE_REFERENCE = 'addCodeReference',
+    REMOVE_CODE_REFERENCE = 'removeCodeReference',
+    CHAT_RESPONSE = 'chatResponse',
+    SESSIONS_LIST = 'sessionsList',
+    SESSION_LOADED = 'sessionLoaded',
+    SWITCH_SESSION = 'switchSession',
+    CREATE_SESSION = 'createSession',
+    RENAME_SESSION = 'renameSession',
+    DELETE_SESSION = 'deleteSession',
+    GET_SESSIONS = 'getSessions',
+    RESTART_SERVER = 'restartServer',
+    GET_SERVER_STATUS = 'getServerStatus'
+} 
