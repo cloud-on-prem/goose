@@ -177,6 +177,18 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 				this._sendWorkspaceContext();
 				break;
 
+			case MessageType.REMOVE_CODE_REFERENCE:
+				// Handle removing a code reference from the UI
+				if (message.id) {
+					console.log('Removing code reference with ID:', message.id);
+					// Send back confirmation to the webview to update its state
+					this._sendMessageToWebview({
+						command: MessageType.REMOVE_CODE_REFERENCE,
+						id: message.id
+					});
+				}
+				break;
+
 			case MessageType.GET_SESSIONS:
 				try {
 					const sessions = await this._sessionManager.fetchSessions();
