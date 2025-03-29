@@ -39,43 +39,19 @@ export class ServerManager {
     private extensionEvents: EventEmitter;
     private secretKey: string;
     private serverProcess: cp.ChildProcess | null = null;
-    private static readonly SECRET_KEY_STORAGE_KEY = 'goose-server-secret-key';
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.eventEmitter = new EventEmitter();
         this.extensionEvents = new EventEmitter();
 
-        // Get or generate a secret key
-        this.secretKey = this.getOrGenerateSecretKey();
+        // Generate a new secret key on initialization
+        this.secretKey = this.generateSecretKey();
 
         // Register cleanup on extension deactivation
         context.subscriptions.push({
             dispose: () => this.stop()
         });
-    }
-
-    /**
-     * Get the existing secret key from storage or generate a new one
-     */
-    private getOrGenerateSecretKey(): string {
-        // Try to get the key from storage
-        const existingKey = this.context.globalState.get<string>(ServerManager.SECRET_KEY_STORAGE_KEY);
-
-        if (existingKey) {
-            console.log('Using existing secret key from storage');
-            return existingKey;
-        }
-
-        // Generate a new random key
-        console.log('Generating new random secret key');
-        const newKey = this.generateSecretKey();
-
-        // Store it for future use
-        this.context.globalState.update(ServerManager.SECRET_KEY_STORAGE_KEY, newKey);
-        console.log('Generated and stored new secret key');
-
-        return newKey;
     }
 
     /**
@@ -110,6 +86,9 @@ export class ServerManager {
             console.log('Server is already running or starting');
             return false;
         }
+
+        // Generate a new secret key each time we start the server
+        this.secretKey = this.generateSecretKey();
 
         this.setStatus(ServerStatus.STARTING);
         console.log('Starting Goose server...');
