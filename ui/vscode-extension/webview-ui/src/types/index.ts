@@ -23,7 +23,9 @@ export enum MessageType {
     CREATE_SESSION = 'createSession',
     RENAME_SESSION = 'renameSession',
     DELETE_SESSION = 'deleteSession',
-    GET_SESSIONS = 'getSessions'
+    GET_SESSIONS = 'getSessions',
+    RESTART_SERVER = 'restartServer',
+    GET_SERVER_STATUS = 'getServerStatus'
 }
 
 // Type for code references
@@ -69,4 +71,11 @@ export interface ImageContent {
     url: string;
 }
 
-export type MessageContent = TextContent | ImageContent; 
+export interface ActionContent {
+    type: 'action';
+    id: string;
+    label: string;
+    action: string;
+}
+
+export type MessageContent = TextContent | ImageContent | ActionContent; 

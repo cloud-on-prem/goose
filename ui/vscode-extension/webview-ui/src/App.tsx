@@ -31,7 +31,8 @@ const App: React.FC = () => {
         codeReferences,
         workspaceContext,
         sendChatMessage,
-        stopGeneration
+        stopGeneration,
+        restartServer
     } = useVSCodeMessaging();
 
     // Log messages when they change - with error handling
@@ -128,8 +129,10 @@ const App: React.FC = () => {
                     isLoading={isLoading}
                     copiedMessageId={copiedMessageId}
                     intermediateText={intermediateText}
+                    serverStatus={serverStatus}
                     onCopyMessage={handleCopyMessage}
                     onStopGeneration={stopGeneration}
+                    restartServer={restartServer}
                 />
             </div>
 

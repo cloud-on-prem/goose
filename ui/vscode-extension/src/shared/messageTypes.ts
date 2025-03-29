@@ -4,6 +4,7 @@ export enum MessageType {
     ACTIVE_EDITOR_CONTENT = 'activeEditorContent',
     ERROR = 'error',
     SERVER_STATUS = 'serverStatus',
+    SERVER_EXIT = 'serverExit',
     CHAT_MESSAGE = 'chatMessage',
     SEND_CHAT_MESSAGE = 'sendChatMessage',
     AI_MESSAGE = 'aiMessage',
@@ -21,5 +22,7 @@ export enum MessageType {
     CREATE_SESSION = 'createSession',
     RENAME_SESSION = 'renameSession',
     DELETE_SESSION = 'deleteSession',
-    GET_SESSIONS = 'getSessions'
+    GET_SESSIONS = 'getSessions',
+    RESTART_SERVER = 'restartServer',
+    GET_SERVER_STATUS = 'getServerStatus'
 } 

@@ -37,7 +37,9 @@ enum MessageType {
 	RENAME_SESSION = 'renameSession',
 	DELETE_SESSION = 'deleteSession',
 	GET_SESSIONS = 'getSessions',
-	SERVER_EXIT = 'serverExit'
+	SERVER_EXIT = 'serverExit',
+	GET_SERVER_STATUS = 'getServerStatus',
+	RESTART_SERVER = 'restartServer'
 }
 
 // Interface for messages sent between extension and webview
@@ -409,6 +411,35 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 					console.error('Error deleting session:', error);
 					vscode.window.showErrorMessage('Failed to delete session');
 				}
+				break;
+
+			case MessageType.GET_SERVER_STATUS:
+				this._sendMessageToWebview({
+					command: MessageType.SERVER_STATUS,
+					status: this._serverManager.getStatus()
+				});
+				break;
+
+			case MessageType.RESTART_SERVER:
+				console.log('Restarting Goose server...');
+				// Restart the server
+				this._serverManager.restart().then(success => {
+					// Send updated status
+					this._sendMessageToWebview({
+						command: MessageType.SERVER_STATUS,
+						status: this._serverManager.getStatus()
+					});
+
+					if (success) {
+						console.log('Server restarted successfully');
+					} else {
+						console.error('Failed to restart server');
+						this._sendMessageToWebview({
+							command: MessageType.ERROR,
+							errorMessage: 'Failed to restart the Goose server'
+						});
+					}
+				});
 				break;
 
 			default:
