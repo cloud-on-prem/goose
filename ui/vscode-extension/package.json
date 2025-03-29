@@ -8,6 +8,8 @@
     "url": "https://github.com/block/goose"
   },
   "license": "MIT",
+  "icon": "resources/goose-icon.png",
+  "publisher": "Block",
   "engines": {
     "vscode": "^1.98.0"
   },
