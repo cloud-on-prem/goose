@@ -37,30 +37,12 @@ export class GooseCodeActionProvider implements vscode.CodeActionProvider {
             }
         }
 
-        // Add general improvement actions if there's a selection
+        // Add only the "Ask Goose about this code" action if there's a selection
         if (!range.isEmpty) {
             actions.push(this.createGeneralAction(
-                'Explain with Goose',
-                'goose.explainCode',
+                'Ask Goose about this code',
+                'goose.askAboutSelection',
                 vscode.CodeActionKind.QuickFix
-            ));
-
-            actions.push(this.createGeneralAction(
-                'Optimize with Goose',
-                'goose.optimizeCode',
-                vscode.CodeActionKind.RefactorRewrite
-            ));
-
-            actions.push(this.createGeneralAction(
-                'Generate tests with Goose',
-                'goose.generateTests',
-                vscode.CodeActionKind.RefactorRewrite
-            ));
-
-            actions.push(this.createGeneralAction(
-                'Document with Goose',
-                'goose.documentCode',
-                vscode.CodeActionKind.RefactorRewrite
             ));
         }
 
@@ -74,13 +56,13 @@ export class GooseCodeActionProvider implements vscode.CodeActionProvider {
         diagnostic: vscode.Diagnostic
     ): vscode.CodeAction | null {
         const action = new vscode.CodeAction(
-            `Fix with Goose: ${this.trimDiagnosticMessage(diagnostic.message)}`,
+            `Ask Goose about this code: ${this.trimDiagnosticMessage(diagnostic.message)}`,
             vscode.CodeActionKind.QuickFix
         );
 
         action.command = {
-            title: 'Fix with Goose',
-            command: 'goose.fixIssues'
+            title: 'Ask Goose about this code',
+            command: 'goose.askAboutSelection'
         };
 
         action.diagnostics = [diagnostic];
