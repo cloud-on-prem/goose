@@ -1,15 +1,57 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { MessageContent as MessageContentType } from '../../types';
+import { MessageContent as MessageContentType } from '../../types/index';
+import { useVSCodeMessaging } from '../../hooks/useVSCodeMessaging';
+import './MessageContent.css';
+
+// Simple function to convert markdown to HTML
+const renderMarkdownAsHTML = (text: string): string => {
+    if (!text) return '';
+
+    // Basic markdown parsing for common elements
+    let html = text
+        // Convert code blocks
+        .replace(/```([a-z]*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+        // Convert inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Convert headers
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        // Convert bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Convert italic
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Convert links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        // Convert line breaks
+        .replace(/\n/g, '<br>');
+
+    return html;
+};
 
 interface MessageContentProps {
     content: MessageContentType[];
 }
 
 export const MessageContentRenderer: React.FC<MessageContentProps> = ({ content }) => {
+    // Get the messaging hooks for actions
+    const { restartServer, serverStatus } = useVSCodeMessaging();
+
+    // Handle action button clicks
+    const handleAction = (action: string) => {
+        console.log('Action clicked:', action);
+        switch (action) {
+            case 'restart-server':
+                restartServer();
+                break;
+            default:
+                console.warn('Unknown action:', action);
+        }
+    };
+
+    // Check if the server is in a state where restart shouldn't be enabled
+    const isServerBusy = serverStatus === 'starting' || serverStatus === 'running';
+
     // If content array is empty or null/undefined, show a placeholder
     if (!content || content.length === 0) {
         return (
@@ -78,74 +120,52 @@ export const MessageContentRenderer: React.FC<MessageContentProps> = ({ content 
 
                     return (
                         <div key={index} className="message-text">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    // Custom code block rendering with syntax highlighting
-                                    code({ _node, inline, className, children, ...props }: {
-                                        _node?: any;
-                                        inline?: boolean;
-                                        className?: string;
-                                        children: React.ReactNode;
-                                    }) {
-                                        const match = /language-(\w+)/.exec(className || '');
-                                        const lang = match ? match[1] : '';
-
-                                        if (!inline) {
-                                            return (
-                                                <SyntaxHighlighter
-                                                    style={{
-                                                        ...vscDarkPlus,
-                                                        'pre[class*="language-"]': {
-                                                            background: 'var(--vscode-textCodeBlock-background)',
-                                                            margin: '1em 0',
-                                                            padding: '1em',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid var(--vscode-widget-border)'
-                                                        },
-                                                        'code[class*="language-"]': {
-                                                            background: 'var(--vscode-textCodeBlock-background)',
-                                                            padding: '0',
-                                                            fontFamily: 'var(--vscode-editor-font-family)',
-                                                            fontSize: 'var(--vscode-editor-font-size)'
-                                                        }
-                                                    }}
-                                                    language={lang || 'text'}
-                                                    PreTag="div"
-                                                    wrapLongLines={true}
-                                                    customStyle={{
-                                                        margin: '1em 0',
-                                                        padding: '0',
-                                                        width: '100%',
-                                                        overflow: 'auto'
-                                                    }}
-                                                    {...props}
-                                                >
-                                                    {String(children).replace(/\n$/, '')}
-                                                </SyntaxHighlighter>
-                                            );
-                                        }
-
-                                        // For inline code, use the VSCode theme variables directly
-                                        return (
-                                            <code
-                                                className={`inline-code ${className || ''}`}
-                                                {...props}
-                                            >
-                                                {children}
-                                            </code>
-                                        );
-                                    }
-                                }}
-                            >
-                                {textContent}
-                            </ReactMarkdown>
+                            <div className="markdown-content" dangerouslySetInnerHTML={{ __html: renderMarkdownAsHTML(textContent) }} />
                         </div>
                     );
                 } else if (item.type === 'image' && 'url' in item) {
                     return (
                         <div key={index} className="message-image">
                             <img src={item.url} alt="Generated" />
+                        </div>
+                    );
+                } else if (item.type === 'action' && 'action' in item) {
+                    // If action is for restarting server, show appropriate status
+                    const isRestartAction = item.action === 'restart-server';
+
+                    // If server is running, don't show the restart button at all
+                    if (isRestartAction && serverStatus === 'running') {
+                        return (
+                            <div key={index} className="message-action">
+                                <div className="server-status-message">
+                                    <span className="status-icon"><i className="codicon codicon-check"></i></span>
+                                    Server is now running
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // If server is starting, show a message indicating it's starting
+                    if (isRestartAction && serverStatus === 'starting') {
+                        return (
+                            <div key={index} className="message-action">
+                                <div className="server-status-message">
+                                    <span className="status-icon"><i className="codicon codicon-loading codicon-modifier-spin"></i></span>
+                                    Server is starting...
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div key={index} className="message-action">
+                            <button
+                                className="action-button"
+                                onClick={() => handleAction(item.action)}
+                                title={item.label}
+                            >
+                                {isRestartAction ? 'Restart Server' : item.label}
+                            </button>
                         </div>
                     );
                 }

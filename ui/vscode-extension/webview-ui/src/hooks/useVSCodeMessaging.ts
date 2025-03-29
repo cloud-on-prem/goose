@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getVSCodeAPI } from '../utils/vscode';
-import { MessageType } from '../types';
+import { MessageType } from '../../../src/shared/messageTypes';
 import {
     Message,
     Role,
@@ -34,6 +34,7 @@ interface UseVSCodeMessagingResult {
     sendChatMessage: (text: string, refs: any[], sessionId: string | null) => void;
     stopGeneration: () => void;
     getWorkspaceContext: () => void;
+    restartServer: () => void;
 }
 
 export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
@@ -162,6 +163,15 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         });
     }, [vscode]);
 
+    // Restart the server
+    const restartServer = useCallback(() => {
+        console.log('Requesting server restart');
+        vscode.postMessage({
+            command: MessageType.RESTART_SERVER
+        });
+        // We don't need to add a system message here since the status is already shown in the UI status pill
+    }, [vscode]);
+
     // Set up event listener for VS Code extension messages
     useEffect(() => {
         // Initial setup
@@ -266,62 +276,42 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                 case MessageType.SERVER_STATUS:
                     if (message.status) {
                         console.log('Updating server status:', message.status);
+
+                        // Check if server is transitioning from stopped/error to running
+                        const wasDown = serverStatus === 'stopped' || serverStatus === 'error';
+                        const isNowRunning = message.status === 'running';
+
+                        // Update the server status first
                         setServerStatus(message.status);
+
+                        // Show server back up message if appropriate
+                        if (wasDown && isNowRunning) {
+                            const serverUpMessage: ExtendedMessage = {
+                                id: `server_up_${Date.now()}`,
+                                role: 'system',
+                                created: Date.now(),
+                                content: [{
+                                    type: 'text',
+                                    text: 'Goose server is now connected and ready.'
+                                }]
+                            };
+                            safeguardedSetMessages(prev => [...prev, serverUpMessage]);
+                        }
                     }
                     break;
                 case MessageType.SERVER_EXIT:
                     console.log('Server process exited with code:', message.code);
                     setServerStatus('stopped');
-                    const exitMessage: ExtendedMessage = {
-                        id: `server_exit_${Date.now()}`,
-                        role: 'system',
-                        created: Date.now(),
-                        content: [{
-                            type: 'text',
-                            text: `⚠️ The Goose server process has exited${message.code ? ` with code ${message.code}` : ''}.`
-                        }],
-                        sessionId: message.sessionId
-                    };
-                    safeguardedSetMessages(prev => [...prev, exitMessage]);
+                    // We'll let the GeneratingIndicator component in MessageList handle the display
+                    // of the server exit status, so we don't need to create a separate message
                     break;
                 case MessageType.ERROR:
                     if (message.errorMessage) {
                         console.error('Error from extension:', message.errorMessage);
                         console.log('Connection error detected, updating server status to stopped');
                         setServerStatus('stopped');
-
-                        // Check for recent error messages to prevent duplicates
-                        const recentErrorMessage = messages[messages.length - 1];
-                        const isRecentError = recentErrorMessage &&
-                            recentErrorMessage.role === 'system' &&
-                            recentErrorMessage.content.some(c =>
-                                isTextContent(c) && c.text.includes('Failed to connect to Goose server')
-                            ) &&
-                            Date.now() - recentErrorMessage.created < 1000;
-
-                        if (!isRecentError) {
-                            const errorMessage: ExtendedMessage = {
-                                id: `error_${Date.now()}`,
-                                role: 'system',
-                                created: Date.now(),
-                                content: [{
-                                    type: 'text',
-                                    text: '❌ Failed to connect to Goose server. Please check if the server is running.'
-                                }],
-                                sessionId: message.sessionId
-                            };
-                            safeguardedSetMessages(prev => {
-                                // Double check for duplicates before adding
-                                const isDuplicate = prev.some(msg =>
-                                    msg.role === 'system' &&
-                                    msg.content.some(c =>
-                                        isTextContent(c) && c.text.includes('Failed to connect to Goose server')
-                                    ) &&
-                                    Date.now() - msg.created < 1000
-                                );
-                                return isDuplicate ? prev : [...prev, errorMessage];
-                            });
-                        }
+                        // We're now handling error display through the GeneratingIndicator component
+                        // so we don't need to create a separate error message
                     }
                     break;
                 case MessageType.ADD_CODE_REFERENCE:
@@ -371,8 +361,8 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
                         try {
                             // Very basic message transformation - just ensure required fields exist
                             const validMessages = message.messages
-                                .filter(msg => msg && typeof msg === 'object')
-                                .map(msg => ({
+                                .filter((msg: any) => msg && typeof msg === 'object')
+                                .map((msg: any) => ({
                                     id: msg.id || `msg_${Math.random().toString(36).substr(2, 9)}`,
                                     role: msg.role || 'unknown',
                                     created: msg.created || Date.now(),
@@ -413,7 +403,9 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         sendHelloMessage,
         getWorkspaceContext,
         processedMessageIds,
-        safeguardedSetMessages
+        safeguardedSetMessages,
+        serverStatus,
+        messages
     ]);
 
     return {
@@ -426,6 +418,7 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         workspaceContext,
         sendChatMessage,
         stopGeneration,
-        getWorkspaceContext
+        getWorkspaceContext,
+        restartServer
     };
 }; 

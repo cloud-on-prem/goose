@@ -9,8 +9,10 @@ interface MessageListProps {
     isLoading: boolean;
     copiedMessageId: string | null;
     intermediateText: string | null;
+    serverStatus: string;
     onCopyMessage: (message: MessageType) => void;
     onStopGeneration: () => void;
+    restartServer: () => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -18,12 +20,16 @@ const MessageList: React.FC<MessageListProps> = ({
     isLoading,
     copiedMessageId,
     intermediateText,
+    serverStatus,
     onCopyMessage,
-    onStopGeneration
+    onStopGeneration,
+    restartServer
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const generatingIndicatorRef = useRef<HTMLDivElement>(null);
     const [autoScroll, setAutoScroll] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
+    const prevServerStatusRef = useRef(serverStatus);
 
     // Scroll to bottom of message list when messages change
     const scrollToBottom = useCallback(() => {
@@ -67,6 +73,21 @@ const MessageList: React.FC<MessageListProps> = ({
             scrollToBottom();
         }
     }, [isMounted, scrollToBottom, messages.length, intermediateText]);
+
+    // Scroll error message into view when it appears
+    useEffect(() => {
+        // If server status changes to stopped/error, scroll the error message into view
+        if (
+            (serverStatus === 'stopped' || serverStatus === 'error') &&
+            prevServerStatusRef.current !== serverStatus &&
+            generatingIndicatorRef.current
+        ) {
+            generatingIndicatorRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Store the current status for the next render
+        prevServerStatusRef.current = serverStatus;
+    }, [serverStatus]);
 
     if (messages.length === 0) {
         return (
@@ -124,12 +145,19 @@ const MessageList: React.FC<MessageListProps> = ({
                 );
             })}
 
-            {/* Loading/generating indicator */}
-            {isLoading && (
-                <GeneratingIndicator
-                    onStop={onStopGeneration}
-                    intermediateContent={intermediateText}
-                />
+            {/* Loading/generating indicator or server error message */}
+            {(isLoading || serverStatus === 'stopped' || serverStatus === 'error') && (
+                <div ref={generatingIndicatorRef}>
+                    <GeneratingIndicator
+                        onStop={serverStatus === 'stopped' || serverStatus === 'error' ? restartServer : onStopGeneration}
+                        intermediateContent={intermediateText}
+                        errorMessage={
+                            serverStatus === 'stopped' || serverStatus === 'error'
+                                ? 'The Goose server process has exited.'
+                                : null
+                        }
+                    />
+                </div>
             )}
 
             <div ref={messagesEndRef} />
