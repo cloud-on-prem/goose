@@ -91,7 +91,6 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 
 		// Handle messages from the webview
 		webviewView.webview.onDidReceiveMessage(async (message) => {
-			console.log(`Received message from webview: ${JSON.stringify(message)}`);
 			await this._onDidReceiveMessage(message);
 		});
 
@@ -137,11 +136,8 @@ class GooseViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private async _onDidReceiveMessage(message: any) {
-		console.log('Received message from webview:', message);
-
 		switch (message.command) {
 			case MessageType.HELLO:
-				console.log('Hello from webview!');
 				break;
 
 			case MessageType.GET_ACTIVE_EDITOR_CONTENT:
