@@ -1,6 +1,10 @@
 import React from 'react';
 import { MessageContent as MessageContentType } from '../../types/index';
 import { useVSCodeMessaging } from '../../hooks/useVSCodeMessaging';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
 import './MessageContent.css';
 
 // Simple function to convert markdown to HTML
@@ -120,7 +124,32 @@ export const MessageContentRenderer: React.FC<MessageContentProps> = ({ content 
 
                     return (
                         <div key={index} className="message-text">
-                            <div className="markdown-content" dangerouslySetInnerHTML={{ __html: renderMarkdownAsHTML(textContent) }} />
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    code({ className, children, ...props }) {
+                                        // Check if this is a code block (has language class)
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const isCodeBlock = !!match;
+
+                                        return isCodeBlock ? (
+                                            <SyntaxHighlighter
+                                                language={match ? match[1] : ''}
+                                                style={vscDarkPlus}
+                                                PreTag="div"
+                                            >
+                                                {String(children).replace(/\n$/, '')}
+                                            </SyntaxHighlighter>
+                                        ) : (
+                                            <code className={className} {...props}>
+                                                {children}
+                                            </code>
+                                        );
+                                    }
+                                }}
+                            >
+                                {textContent}
+                            </ReactMarkdown>
                         </div>
                     );
                 } else if (item.type === 'image' && 'url' in item) {
