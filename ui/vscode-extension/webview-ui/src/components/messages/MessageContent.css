@@ -138,3 +138,59 @@
 .markdown-content em {
     font-style: italic;
 }
+
+/* React Syntax Highlighter styles */
+.message-text pre {
+    margin: 12px 0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.message-text pre>div {
+    border-radius: 6px;
+    margin: 0 !important;
+    padding: 12px !important;
+    background: transparent !important;
+}
+
+/* Style inline code */
+.message-text code {
+    font-family: var(--vscode-editor-font-family, monospace);
+    background-color: var(--vscode-textCodeBlock-background);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* Custom styles for different languages */
+.language-js,
+.language-javascript,
+.language-ts,
+.language-typescript,
+.language-jsx,
+.language-tsx {
+    font-family: var(--vscode-editor-font-family, monospace) !important;
+}
+
+.language-json {
+    font-family: var(--vscode-editor-font-family, monospace) !important;
+}
+
+/* Keep table styling */
+.message-text table {
+    border-collapse: collapse;
+    margin: 12px 0;
+    width: 100%;
+}
+
+.message-text table th,
+.message-text table td {
+    border: 1px solid var(--vscode-panel-border);
+    padding: 6px 12px;
+    text-align: left;
+}
+
+.message-text table th {
+    background-color: var(--vscode-editor-background);
+    font-weight: bold;
+}
