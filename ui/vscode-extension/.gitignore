@@ -11,8 +11,14 @@ out/
 dist/
 *.vsix
 .vscode-test/
+*.js
+*.js.map
 
-# Binary executables 
+# Exclude these specific files from being ignored
+!webview-ui/postcss.config.js
+!webview-ui/tailwind.config.js
+
+# Binary executables
 bin/
 bin/goosed
 bin/*.exe
@@ -43,5 +49,6 @@ webview-ui/node_modules/
 Thumbs.db
 
 # Debug files
-debug*.log 
+debug*.log
 coverage/
+eslint-report.*
