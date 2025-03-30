@@ -1,0 +1,116 @@
+{
+  "name": "goose-vscode",
+  "displayName": "Goose",
+  "description": "Goose AI for VSCode",
+  "version": "0.1.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/block/goose"
+  },
+  "license": "MIT",
+  "icon": "resources/goose-icon.png",
+  "publisher": "Block",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "goose",
+          "title": "Goose",
+          "icon": "resources/goose-icon-dark.svg"
+        }
+      ]
+    },
+    "views": {
+      "goose": [
+        {
+          "type": "webview",
+          "id": "goose.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "goose.helloWorld",
+        "title": "Hello World"
+      },
+      {
+        "command": "goose.start",
+        "title": "Start Goose"
+      },
+      {
+        "command": "goose.startServer",
+        "title": "Goose: Start Server"
+      },
+      {
+        "command": "goose.stopServer",
+        "title": "Goose: Stop Server"
+      },
+      {
+        "command": "goose.askAboutSelection",
+        "title": "Ask Goose about this code"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "goose.askAboutSelection",
+          "when": "editorHasSelection",
+          "group": "goose"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "package": "npm run clean && npm run test-all && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "package:dist": "npm run clean && mkdir -p dist && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn -o dist/goose-vscode-$npm_package_version.vsix",
+    "package:skip-tests": "npm run clean && npm run compile && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "package:inspect": "npx @vscode/vsce ls --no-yarn",
+    "package:verify": "npx @vscode/vsce ls --tree",
+    "compile": "tsc -p ./ && npm run build-webview",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "test-webview": "cd webview-ui && npm run test",
+    "test-all": "npm run test && npm run test-webview",
+    "build-webview": "cd webview-ui && npm run build",
+    "dev-webview": "cd webview-ui && npm run dev",
+    "clean": "rimraf out && rimraf webview-ui/dist && rimraf *.vsix && rimraf dist"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.17.24",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/sinon": "^17.0.4",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^9.21.0",
+    "postcss": "^8.4.32",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rimraf": "^6.0.1",
+    "sinon": "^19.0.4",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.36",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,34 @@
+{
+	"compilerOptions": {
+		"module": "Node16",
+		"target": "es2022",
+		"outDir": "out",
+		"lib": [
+			"es2022",
+			"DOM"
+		],
+		"sourceMap": true,
+		"rootDir": "src",
+		"strict": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedParameters": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"baseUrl": "..",
+		"paths": {
+			"../shared/*": [
+				"shared/*"
+			]
+		}
+	},
+	"include": [
+		"src",
+		"../shared"
+	],
+	"exclude": [
+		"node_modules",
+		"webview-ui",
+		".vscode-test"
+	]
+}
