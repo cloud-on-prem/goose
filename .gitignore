@@ -20,14 +20,6 @@ target/
 ./ui/desktop/node_modules
 ./ui/desktop/out
 
-# VSCode Extension
-ui/vscode-extension/node_modules/
-ui/vscode-extension/out/
-ui/vscode-extension/.vscode-test/
-ui/vscode-extension/*.vsix
-ui/vscode-extension/webview-ui/node_modules/
-ui/vscode-extension/webview-ui/dist/
-
 # Hermit
 /.hermit/
 /bin/
