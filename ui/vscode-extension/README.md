@@ -13,7 +13,9 @@ This extension brings Goose AI functionality to Visual Studio Code.
 
 ## Requirements
 
-You need have Goose Desktop installed (This extension just spawns `goosed` and uses the API which is already bundled with the Desktop App)
+> ⚠️ **VSCode 1.98.0 or higher is required** for this extension to function properly.
+
+> ⚠️ **Goose Desktop must be installed** before using this extension. This extension spawns `goosed` and uses the API which is already bundled with the Desktop App.
 
 ## Installation
 
