@@ -83,7 +83,7 @@
     "test": "vscode-test",
     "test-webview": "cd webview-ui && npm run test",
     "test-all": "npm run test && npm run test-webview",
-    "build-webview": "cd webview-ui && npm run build",
+    "build-webview": "cd webview-ui && npm install && npm run build",
     "dev-webview": "cd webview-ui && npm run dev",
     "clean": "rimraf out && rimraf webview-ui/dist && rimraf *.vsix && rimraf dist"
   },
