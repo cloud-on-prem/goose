@@ -2,7 +2,7 @@
   "name": "goose-vscode",
   "displayName": "Goose",
   "description": "Goose AI for VSCode",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/block/goose"
@@ -11,7 +11,7 @@
   "icon": "resources/goose-icon.png",
   "publisher": "Block",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.95.0"
   },
   "categories": [
     "Other"
@@ -93,7 +93,7 @@
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@types/sinon": "^17.0.4",
-    "@types/vscode": "^1.98.0",
+    "@types/vscode": "^1.95.0",
     "@typescript-eslint/eslint-plugin": "^8.25.0",
     "@typescript-eslint/parser": "^8.25.0",
     "@vitejs/plugin-react": "^4.2.1",
