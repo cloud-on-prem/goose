@@ -1,36 +1,49 @@
-import { initializeAgent } from '../../../agent/index';
+import { initializeSystem } from '../../../utils/providerUtils';
 import { toastError, toastSuccess } from '../../../toasts';
 import { ProviderDetails } from '@/src/api';
+import Model, { getProviderMetadata } from './modelInterface';
+import { ProviderMetadata } from '../../../api';
+import type { ExtensionConfig, FixedExtensionEntry } from '../../ConfigContext';
 
 // titles
-const CHANGE_MODEL_TOAST_TITLE = 'Model selected';
-const START_AGENT_TITLE = 'Initialize agent';
-const UNKNOWN_PROVIDER_TITLE = 'Provider name lookup';
+export const UNKNOWN_PROVIDER_TITLE = 'Provider name lookup';
 
 // errors
-const SWITCH_MODEL_AGENT_ERROR_MSG = 'Failed to start agent with selected model';
-const CONFIG_UPDATE_ERROR_MSG = 'Failed to update configuration settings';
-const CONFIG_READ_MODEL_ERROR_MSG = 'Failed to read GOOSE_MODEL or GOOSE_PROVIDER from config';
-const UNKNOWN_PROVIDER_MSG = 'Unknown provider in config -- please inspect your config.yaml';
+const CHANGE_MODEL_ERROR_TITLE = 'Change failed';
+const SWITCH_MODEL_AGENT_ERROR_MSG =
+  'Failed to start agent with selected model -- please try again';
+const CONFIG_UPDATE_ERROR_MSG = 'Failed to update configuration settings -- please try again';
+export const UNKNOWN_PROVIDER_MSG = 'Unknown provider in config -- please inspect your config.yaml';
 
 // success
+const CHANGE_MODEL_TOAST_TITLE = 'Model changed';
 const SWITCH_MODEL_SUCCESS_MSG = 'Successfully switched models';
-const INITIALIZE_SYSTEM_WITH_MODEL_SUCCESS_MSG = 'Successfully started Goose';
 
 interface changeModelProps {
-  model: string;
-  provider: string;
+  model: Model;
   writeToConfig: (key: string, value: unknown, is_secret: boolean) => Promise<void>;
+  getExtensions?: (b: boolean) => Promise<FixedExtensionEntry[]>;
+  addExtension?: (name: string, config: ExtensionConfig, enabled: boolean) => Promise<void>;
 }
 
 // TODO: error handling
-export async function changeModel({ model, provider, writeToConfig }: changeModelProps) {
+export async function changeModel({
+  model,
+  writeToConfig,
+  getExtensions,
+  addExtension,
+}: changeModelProps) {
+  const modelName = model.name;
+  const providerName = model.provider;
   try {
-    await initializeAgent({ model: model, provider: provider });
+    await initializeSystem(providerName, modelName, {
+      getExtensions,
+      addExtension,
+    });
   } catch (error) {
-    console.error(`Failed to change model at agent step -- ${model} ${provider}`);
+    console.error(`Failed to change model at agent step -- ${modelName} ${providerName}`);
     toastError({
-      title: CHANGE_MODEL_TOAST_TITLE,
+      title: CHANGE_MODEL_ERROR_TITLE,
       msg: SWITCH_MODEL_AGENT_ERROR_MSG,
       traceback: error,
     });
@@ -39,12 +52,12 @@ export async function changeModel({ model, provider, writeToConfig }: changeMode
   }
 
   try {
-    await writeToConfig('GOOSE_PROVIDER', provider, false);
-    await writeToConfig('GOOSE_MODEL', model, false);
+    await writeToConfig('GOOSE_PROVIDER', providerName, false);
+    await writeToConfig('GOOSE_MODEL', modelName, false);
   } catch (error) {
-    console.error(`Failed to change model at config step -- ${model} ${provider}`);
+    console.error(`Failed to change model at config step -- ${modelName} ${providerName}}`);
     toastError({
-      title: CHANGE_MODEL_TOAST_TITLE,
+      title: CHANGE_MODEL_ERROR_TITLE,
       msg: CONFIG_UPDATE_ERROR_MSG,
       traceback: error,
     });
@@ -54,50 +67,7 @@ export async function changeModel({ model, provider, writeToConfig }: changeMode
     // show toast
     toastSuccess({
       title: CHANGE_MODEL_TOAST_TITLE,
-      msg: `${SWITCH_MODEL_SUCCESS_MSG} -- using ${model} from ${provider}`,
-    });
-  }
-}
-
-interface startAgentFromConfigProps {
-  readFromConfig: (key: string, is_secret: boolean) => Promise<unknown>;
-}
-
-// starts agent with the values for GOOSE_PROVIDER and GOOSE_MODEL that are in the config
-export async function startAgentFromConfig({ readFromConfig }: startAgentFromConfigProps) {
-  let modelProvider: { model: string; provider: string };
-
-  // read from config
-  try {
-    modelProvider = await getCurrentModelAndProvider({ readFromConfig: readFromConfig });
-  } catch (error) {
-    toastError({
-      title: START_AGENT_TITLE,
-      msg: CONFIG_READ_MODEL_ERROR_MSG,
-      traceback: error,
-    });
-    return;
-  }
-
-  const model = modelProvider.model;
-  const provider = modelProvider.provider;
-
-  console.log(`Starting agent with GOOSE_MODEL=${model} and GOOSE_PROVIDER=${provider}`);
-
-  try {
-    await initializeAgent({ model: model, provider: provider });
-  } catch (error) {
-    console.error(`Failed to change model at agent step -- ${model} ${provider}`);
-    toastError({
-      title: CHANGE_MODEL_TOAST_TITLE,
-      msg: SWITCH_MODEL_AGENT_ERROR_MSG,
-      traceback: error,
-    });
-    return;
-  } finally {
-    toastSuccess({
-      title: CHANGE_MODEL_TOAST_TITLE,
-      msg: `${INITIALIZE_SYSTEM_WITH_MODEL_SUCCESS_MSG} with ${model} from ${provider}`,
+      msg: `${SWITCH_MODEL_SUCCESS_MSG} -- using ${model.alias ?? modelName} from ${model.subtext ?? providerName}`,
     });
   }
 }
@@ -137,19 +107,15 @@ export async function getCurrentModelAndProviderForDisplay({
   const gooseModel = modelProvider.model;
   const gooseProvider = modelProvider.provider;
 
-  const providers = await getProviders(false);
-
   // lookup display name
-  const providerDetailsList = providers.filter((provider) => provider.name === gooseProvider);
+  let metadata: ProviderMetadata;
 
-  if (providerDetailsList.length != 1) {
-    toastError({
-      title: UNKNOWN_PROVIDER_TITLE,
-      msg: UNKNOWN_PROVIDER_MSG,
-    });
+  try {
+    metadata = await getProviderMetadata(gooseProvider, getProviders);
+  } catch (error) {
     return { model: gooseModel, provider: gooseProvider };
   }
-  const providerDisplayName = providerDetailsList[0].metadata.display_name;
+  const providerDisplayName = metadata.display_name;
 
   return { model: gooseModel, provider: providerDisplayName };
 }

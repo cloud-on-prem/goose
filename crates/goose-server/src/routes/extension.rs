@@ -11,6 +11,7 @@ use goose::{
 };
 use http::{HeaderMap, StatusCode};
 use serde::{Deserialize, Serialize};
+use tracing;
 
 /// Enum representing the different types of extension configuration requests.
 #[derive(Deserialize)]
@@ -51,6 +52,16 @@ enum ExtensionConfigRequest {
         display_name: Option<String>,
         timeout: Option<u64>,
     },
+    /// Frontend extension that provides tools to be executed by the frontend.
+    #[serde(rename = "frontend")]
+    Frontend {
+        /// The name to identify this extension
+        name: String,
+        /// The tools provided by this extension
+        tools: Vec<mcp_core::tool::Tool>,
+        /// Optional instructions for using the tools
+        instructions: Option<String>,
+    },
 }
 
 /// Response structure for adding an extension.
@@ -67,8 +78,26 @@ struct ExtensionResponse {
 async fn add_extension(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(request): Json<ExtensionConfigRequest>,
+    raw: axum::extract::Json<serde_json::Value>,
 ) -> Result<Json<ExtensionResponse>, StatusCode> {
+    // Log the raw request for debugging
+    tracing::info!(
+        "Received extension request: {}",
+        serde_json::to_string_pretty(&raw.0).unwrap()
+    );
+
+    // Try to parse into our enum
+    let request: ExtensionConfigRequest = match serde_json::from_value(raw.0.clone()) {
+        Ok(req) => req,
+        Err(e) => {
+            tracing::error!("Failed to parse extension request: {}", e);
+            tracing::error!(
+                "Raw request was: {}",
+                serde_json::to_string_pretty(&raw.0).unwrap()
+            );
+            return Err(StatusCode::UNPROCESSABLE_ENTITY);
+        }
+    };
     // Verify the presence and validity of the secret key.
     let secret_key = headers
         .get("X-Secret-Key")
@@ -181,6 +210,15 @@ async fn add_extension(
             name,
             display_name,
             timeout,
+        },
+        ExtensionConfigRequest::Frontend {
+            name,
+            tools,
+            instructions,
+        } => ExtensionConfig::Frontend {
+            name,
+            tools,
+            instructions,
         },
     };
 
@@ -316,6 +354,9 @@ fn normalize_command_name(cmd: &str) -> String {
     cmd.replace(".exe", "")
         .replace(".cmd", "")
         .replace(".bat", "")
+        .replace(" -y ", " ")
+        .replace(" -y", "")
+        .replace("-y ", "")
         .to_string()
 }
 
@@ -325,10 +366,8 @@ fn is_command_allowed_with_allowlist(
     cmd: &str,
     allowed_extensions: &Option<AllowedExtensions>,
 ) -> bool {
-    println!("\n\n\n\n\n\n------------\n\nChecking command: {}", cmd);
     // Extract the first part of the command (before any spaces)
     let first_part = cmd.split_whitespace().next().unwrap_or(cmd);
-    println!("First part: {}", first_part);
 
     // Extract the base command name (last part of the path)
     let cmd_base_with_ext = Path::new(first_part)
@@ -371,8 +410,6 @@ fn is_command_allowed_with_allowlist(
         return false;
     }
 
-    println!("Allowed extensions: {:?}", allowed_extensions);
-
     match allowed_extensions {
         // No allowlist configured, allow all commands
         None => true,
@@ -382,40 +419,74 @@ fn is_command_allowed_with_allowlist(
 
         // Check against the allowlist
         Some(extensions) => {
-            // Check that the command exists as a peer command to current executable directory
-            // Only apply this check if the command includes a path separator
-            let current_exe = std::env::current_exe().unwrap();
-            let current_exe_dir = current_exe.parent().unwrap();
-            let expected_path = current_exe_dir
-                .join(&cmd_base)
-                .to_str()
-                .unwrap()
-                .to_string();
+            // Strip out the Goose.app/Contents/Resources/bin/ prefix if present
+            let mut cmd_to_check = cmd.to_string();
 
-            // Normalize both paths before comparing
-            let normalized_cmd_path = normalize_command_name(first_part);
+            // Check if the command path contains Goose.app/Contents/Resources/bin/
+            if cmd_to_check.contains("Goose.app/Contents/Resources/bin/") {
+                // Find the position of "Goose.app/Contents/Resources/bin/"
+                if let Some(idx) = cmd_to_check.find("Goose.app/Contents/Resources/bin/") {
+                    // Extract only the part after "Goose.app/Contents/Resources/bin/"
+                    cmd_to_check = cmd_to_check
+                        [(idx + "Goose.app/Contents/Resources/bin/".len())..]
+                        .to_string();
+                }
+            } else {
+                // Only apply the path check if we're not dealing with a Goose.app path
+                // Check that the command exists as a peer command to current executable directory
+                // Only apply this check if the command includes a path separator
+                let current_exe = std::env::current_exe().unwrap();
+                let current_exe_dir = current_exe.parent().unwrap();
+                let expected_path = current_exe_dir
+                    .join(&cmd_base)
+                    .to_str()
+                    .unwrap()
+                    .to_string();
 
-            if (first_part.contains('/') || first_part.contains('\\'))
-                && normalized_cmd_path != expected_path
-            {
-                println!("Command not in expected directory: {}", cmd);
-                return false;
+                // Normalize both paths before comparing
+                let normalized_cmd_path = normalize_command_name(first_part);
+
+                if (first_part.contains('/') || first_part.contains('\\'))
+                    && normalized_cmd_path != expected_path
+                    && !cmd_to_check.contains("Goose.app/Contents/Resources/bin/")
+                {
+                    println!("Command not in expected directory: {}", cmd);
+                    return false;
+                }
+
+                // Remove current_exe_dir + "/" from the cmd to clean it up
+                let path_to_trim = format!("{}/", current_exe_dir.to_str().unwrap());
+                cmd_to_check = cmd_to_check.replace(&path_to_trim, "");
             }
 
-            //let cmd_to_check= cmd.replace(current_exe_dir.to_str(), "").to_string();
+            println!("Command to check after path trimming: {}", cmd_to_check);
 
-            // remove current_exe_dir + "/" from the cmd to clean it up
-            let path_to_trim = format!("{}/", current_exe_dir.to_str().unwrap());
+            // Remove @version suffix from command parts
+            let parts: Vec<&str> = cmd_to_check.split_whitespace().collect();
+            let mut cleaned_parts: Vec<String> = Vec::new();
 
-            // now remove this to make it clean
-            let cmd_to_check = cmd.replace(&path_to_trim, "");
+            for part in parts {
+                if part.contains('@') {
+                    // Keep only the part before the @ symbol
+                    if let Some(base_part) = part.split('@').next() {
+                        cleaned_parts.push(base_part.to_string());
+                    } else {
+                        cleaned_parts.push(part.to_string());
+                    }
+                } else {
+                    cleaned_parts.push(part.to_string());
+                }
+            }
 
-            println!("Command to check: {}", cmd_to_check);
+            // Reconstruct the command without version suffixes
+            cmd_to_check = cleaned_parts.join(" ");
+
+            println!("Command to check after @version removal: {}", cmd_to_check);
 
             // Normalize the command before comparing with allowlist entries
             let normalized_cmd = normalize_command_name(&cmd_to_check);
 
-            println!("Normalized command: {}", normalized_cmd);
+            println!("Final normalized command: {}", normalized_cmd);
 
             extensions.extensions.iter().any(|entry| {
                 let normalized_entry = normalize_command_name(&entry.command);
@@ -447,6 +518,8 @@ mod tests {
         );
 
         assert_eq!(normalize_command_name("batch.bat"), "batch");
+
+        assert_eq!(normalize_command_name("npx -y thing"), "npx thing");
         assert_eq!(
             normalize_command_name("/path/to/batch.bat thing"),
             "/path/to/batch thing"
@@ -575,6 +648,75 @@ mod tests {
         ));
         assert!(!is_command_allowed_with_allowlist(
             "prefix_npx mcp_github",
+            &allowlist
+        ));
+    }
+
+    #[test]
+    fn test_command_allowed_simple() {
+        let allowlist = create_test_allowlist(&[
+            "uvx something",
+            "uvx mcp_slack",
+            "npx mcp_github",
+            "minecraft",
+        ]);
+
+        // Test with version, anything @version can be stripped when matching
+        assert!(is_command_allowed_with_allowlist(
+            "npx -y mcp_github@latest",
+            &allowlist
+        ));
+    }
+
+    #[test]
+    fn test_command_allowed_flexible() {
+        let allowlist = create_test_allowlist(&[
+            "uvx something",
+            "uvx mcp_slack",
+            "npx -y mcp_github",
+            "npx -y mcp_hammer start",
+            "minecraft",
+        ]);
+
+        // Test with version, anything @version can be stripped when matching
+        assert!(is_command_allowed_with_allowlist(
+            "uvx something@1.0.13",
+            &allowlist
+        ));
+
+        // Test with shim path - 'Goose.app/Contents/Resources/bin/' and before can be stripped to get the command to match
+        assert!(is_command_allowed_with_allowlist(
+            "/private/var/folders/fq/rd_cb6/T/AppTranslocation/EA0195/d/Goose.app/Contents/Resources/bin/uvx something",
+            &allowlist
+        ));
+
+        // Test with shim path & latest version
+        assert!(is_command_allowed_with_allowlist(
+            "/private/var/folders/fq/rd_cb6/T/AppTranslocation/EA0195/d/Goose.app/Contents/Resources/bin/uvx something@latest",
+            &allowlist
+        ));
+
+        // Test with exact command matches
+        assert!(is_command_allowed_with_allowlist(
+            "uvx something",
+            &allowlist
+        ));
+
+        // Test with -y added, it is allowed (ie doesn't matter if we see a -y in there)
+        assert!(is_command_allowed_with_allowlist(
+            "npx -y mcp_github@latest",
+            &allowlist
+        ));
+
+        // Test with -y added, and a version and parameter, it is allowed (npx mcp_hammer start is allowed)
+        assert!(is_command_allowed_with_allowlist(
+            "npx -y mcp_hammer@latest start",
+            &allowlist
+        ));
+
+        // Test with shim path & latest version
+        assert!(is_command_allowed_with_allowlist(
+            "/private/var/folders/fq/rd_cb6/T/AppTranslocation/EA0195/d/Goose.app/Contents/Resources/bin/npx -y mcp_hammer@latest start",
             &allowlist
         ));
     }

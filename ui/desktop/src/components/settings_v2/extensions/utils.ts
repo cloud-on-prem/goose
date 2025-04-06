@@ -1,5 +1,7 @@
 // Default extension timeout in seconds
 // TODO: keep in sync with rust better
+import * as module from 'node:module';
+
 export const DEFAULT_EXTENSION_TIMEOUT = 300;
 
 /**
@@ -24,6 +26,7 @@ export interface ExtensionFormData {
   cmd?: string;
   endpoint?: string;
   enabled: boolean;
+  timeout?: number;
   envVars: { key: string; value: string }[];
 }
 
@@ -35,6 +38,7 @@ export function getDefaultFormData(): ExtensionFormData {
     cmd: '',
     endpoint: '',
     enabled: true,
+    timeout: 300,
     envVars: [],
   };
 }
@@ -59,6 +63,7 @@ export function extensionToFormData(extension: FixedExtensionEntry): ExtensionFo
     cmd: extension.type === 'stdio' ? combineCmdAndArgs(extension.cmd, extension.args) : undefined,
     endpoint: extension.type === 'sse' ? extension.uri : undefined,
     enabled: extension.enabled,
+    timeout: extension.timeout,
     envVars,
   };
 }
@@ -84,6 +89,7 @@ export function createExtensionConfig(formData: ExtensionFormData): ExtensionCon
       description: formData.description,
       cmd: cmd,
       args: args,
+      timeout: formData.timeout,
       ...(Object.keys(envs).length > 0 ? { envs } : {}),
     };
   } else if (formData.type === 'sse') {
@@ -91,6 +97,7 @@ export function createExtensionConfig(formData: ExtensionFormData): ExtensionCon
       type: 'sse',
       name: formData.name,
       description: formData.description,
+      timeout: formData.timeout,
       uri: formData.endpoint, // Assuming endpoint maps to uri for SSE type
       ...(Object.keys(envs).length > 0 ? { envs } : {}),
     };
@@ -99,6 +106,7 @@ export function createExtensionConfig(formData: ExtensionFormData): ExtensionCon
     return {
       type: formData.type,
       name: formData.name,
+      timeout: formData.timeout,
     };
   }
 }
@@ -142,4 +150,12 @@ export async function replaceWithShims(cmd: string) {
   }
 
   return cmd;
+}
+
+export function removeShims(cmd: string) {
+  const segments = cmd.split('/');
+  // Filter out any empty segments (which can happen with trailing slashes)
+  const nonEmptySegments = segments.filter((segment) => segment.length > 0);
+  // Return the last segment or empty string if there are no segments
+  return nonEmptySegments.length > 0 ? nonEmptySegments[nonEmptySegments.length - 1] : '';
 }

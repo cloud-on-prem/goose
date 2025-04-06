@@ -1,5 +1,5 @@
 import type { ExtensionConfig } from '../../../api/types.gen';
-import { ToastServiceOptions } from '../../../toasts';
+import { toastService, ToastServiceOptions } from '../../../toasts';
 import { addToAgent, removeFromAgent } from './agent-api';
 
 interface ActivateExtensionProps {
@@ -18,7 +18,7 @@ export async function activateExtension({
 }: ActivateExtensionProps): Promise<void> {
   try {
     // AddToAgent
-    await addToAgent(extensionConfig);
+    await addToAgent(extensionConfig, { silent: false, showEscMessage: true });
   } catch (error) {
     console.error('Failed to add extension to agent:', error);
     // add to config with enabled = false
@@ -147,6 +147,11 @@ export async function updateExtension({
       console.error('[updateExtension]: Failed to update disabled extension in config:', error);
       throw error;
     }
+    // show a toast that it was successfully updated
+    toastService.success({
+      title: `Update extension`,
+      msg: `Successfully updated ${extensionConfig.name} extension`,
+    });
   }
 }
 
@@ -176,7 +181,7 @@ export async function toggleExtension({
         showEscMessage: false,
       });
     } catch (error) {
-      console.error('Error adding extension to agent. Will try to toggle back off. Error:', error);
+      console.error('Error adding extension to agent. Will try to toggle back off.');
       try {
         await toggleExtension({
           toggle: 'toggleOff',

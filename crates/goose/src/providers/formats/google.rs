@@ -83,6 +83,7 @@ pub fn format_messages(messages: &[Message]) -> Vec<Value> {
                                     .iter()
                                     .filter_map(|c| match c {
                                         Content::Text(t) => Some(t.text.clone()),
+                                        Content::Resource(r) => Some(r.get_text()),
                                         _ => None,
                                     })
                                     .collect::<Vec<_>>()
@@ -351,6 +352,7 @@ mod tests {
             input_schema: json!({
                 "properties": params
             }),
+            annotations: None,
         }
     }
 
@@ -420,7 +422,7 @@ mod tests {
         let tool_result: Vec<Content> = vec![
             Content::text("Hello"),
             Content::text("World"),
-            Content::text("This is a test."),
+            Content::embedded_text("test_uri", "This is a test."),
         ];
 
         let messages = vec![set_up_tool_response_message("response_id", tool_result)];
@@ -494,6 +496,7 @@ mod tests {
             input_schema: json!({
                 "properties": {}
             }),
+            annotations: None,
         }];
         let result = format_tools(&tools);
         assert_eq!(result.len(), 1);

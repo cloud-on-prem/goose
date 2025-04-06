@@ -11,6 +11,7 @@ import ErrorScreen from './components/ErrorScreen';
 import { ConfirmationModal } from './components/ui/ConfirmationModal';
 import { ToastContainer } from 'react-toastify';
 import { toastService } from './toasts';
+import { settingsV2Enabled } from './flags';
 import { extractExtensionName } from './components/settings/extensions/utils';
 import { GoosehintsModal } from './components/GoosehintsModal';
 import { SessionDetails } from './sessions';
@@ -28,14 +29,8 @@ import ProviderSettings from './components/settings_v2/providers/ProviderSetting
 import { useChat } from './hooks/useChat';
 
 import 'react-toastify/dist/ReactToastify.css';
-import { FixedExtensionEntry, useConfig } from './components/ConfigContext';
-import {
-  initializeBuiltInExtensions,
-  syncBuiltInExtensions,
-  addExtensionFromDeepLink as addExtensionFromDeepLinkV2,
-  addToAgentOnStartup,
-} from './components/settings_v2/extensions';
-import { extractExtensionConfig } from './components/settings_v2/extensions/utils';
+import { useConfig } from './components/ConfigContext';
+import { addExtensionFromDeepLink as addExtensionFromDeepLinkV2 } from './components/settings_v2/extensions';
 
 // Views and their options
 export type View =
@@ -69,7 +64,7 @@ export default function App() {
     view: 'welcome',
     viewOptions: {},
   });
-  const { getExtensions, addExtension, read } = useConfig();
+  const { getExtensions, addExtension, read, upsert } = useConfig();
   const initAttemptedRef = useRef(false);
 
   // Utility function to extract the command from the link
@@ -81,7 +76,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!process.env.ALPHA) {
+    if (!settingsV2Enabled) {
       return;
     }
 
@@ -92,11 +87,12 @@ export default function App() {
     }
     initAttemptedRef.current = true;
 
-    console.log(`Initializing app in alpha mode...`);
+    console.log(`Initializing app with settings v2`);
 
     const initializeApp = async () => {
       try {
         const config = window.electron.getConfig();
+
         const provider = config.GOOSE_PROVIDER ?? (await read('GOOSE_PROVIDER', false));
         const model = config.GOOSE_MODEL ?? (await read('GOOSE_MODEL', false));
 
@@ -105,25 +101,10 @@ export default function App() {
           setView('chat');
 
           try {
-            await initializeSystem(provider, model);
-
-            // Initialize or sync built-in extensions into config.yaml
-            let refreshedExtensions = await getExtensions(true);
-
-            if (refreshedExtensions.length === 0) {
-              await initializeBuiltInExtensions(addExtension);
-              refreshedExtensions = await getExtensions(true);
-            } else {
-              await syncBuiltInExtensions(refreshedExtensions, addExtension);
-            }
-
-            // Add enabled extensions to agent
-            for (const extensionEntry of refreshedExtensions) {
-              if (extensionEntry.enabled) {
-                const extensionConfig = extractExtensionConfig(extensionEntry);
-                await addToAgentOnStartup({ addToConfig: addExtension, extensionConfig });
-              }
-            }
+            await initializeSystem(provider, model, {
+              getExtensions,
+              addExtension,
+            });
           } catch (error) {
             console.error('Error in alpha initialization:', error);
             setFatalError(`System initialization error: ${error.message || 'Unknown error'}`);
@@ -285,7 +266,7 @@ export default function App() {
       console.log(`Confirming installation of extension from: ${pendingLink}`);
       setModalVisible(false); // Dismiss modal immediately
       try {
-        if (process.env.ALPHA) {
+        if (settingsV2Enabled) {
           await addExtensionFromDeepLinkV2(pendingLink, addExtension, setView);
         } else {
           await addExtensionFromDeepLink(pendingLink, setView);
@@ -312,11 +293,11 @@ export default function App() {
   const { addRecentModel } = useRecentModels(); // TODO: remove
 
   useEffect(() => {
-    if (process.env.ALPHA) {
+    if (settingsV2Enabled) {
       return;
     }
 
-    console.log(`Initializing app in non-alpha mode...`);
+    console.log(`Initializing app with settings v1`);
 
     // Attempt to detect config for a stored provider
     const detectStoredProvider = () => {
@@ -425,7 +406,7 @@ export default function App() {
         <div className="titlebar-drag-region" />
         <div>
           {view === 'welcome' &&
-            (process.env.ALPHA ? (
+            (settingsV2Enabled ? (
               <ProviderSettings onClose={() => setView('chat')} isOnboarding={true} />
             ) : (
               <WelcomeView
@@ -435,7 +416,7 @@ export default function App() {
               />
             ))}
           {view === 'settings' &&
-            (process.env.ALPHA ? (
+            (settingsV2Enabled ? (
               <SettingsViewV2
                 onClose={() => {
                   setView('chat');

@@ -1,5 +1,6 @@
 import { toast, ToastOptions } from 'react-toastify';
 import React from 'react';
+import { Button } from './components/ui/button';
 
 export interface ToastServiceOptions {
   silent?: boolean;
@@ -23,31 +24,21 @@ export default class ToastService {
   }
 
   configure(options: ToastServiceOptions = {}): void {
-    console.log('ToastService.configure called with options:', options);
     if (options.silent !== undefined) {
-      console.log(`Setting silent from ${this.silent} to ${options.silent}`);
       this.silent = options.silent;
     }
     if (options.showEscMessage !== undefined) {
-      console.log(
-        `Setting showEscMessage from ${this.showEscMessage} to ${options.showEscMessage}`
-      );
       this.showEscMessage = options.showEscMessage;
     }
     if (options.shouldThrow !== undefined) {
-      console.log(`Setting shouldThrow from ${this.shouldThrow} to ${options.shouldThrow}`);
       this.shouldThrow = options.shouldThrow;
     }
   }
 
   error({ title, msg, traceback }: { title: string; msg: string; traceback: string }): void {
-    console.log(`ToastService.error called - silent=${this.silent}`, { title, msg });
     if (!this.silent) {
       toastError({ title, msg, traceback });
-    } else {
-      console.log('Toast suppressed because silent=true');
     }
-    console.error(msg, traceback);
 
     if (this.shouldThrow) {
       throw new Error(msg);
@@ -55,9 +46,7 @@ export default class ToastService {
   }
 
   loading({ title, msg }: { title: string; msg: string }): string | number | undefined {
-    console.log(`ToastService.loading called - silent=${this.silent}`, { title, msg });
     if (this.silent) {
-      console.log('Toast suppressed because silent=true');
       return undefined;
     }
 
@@ -72,9 +61,7 @@ export default class ToastService {
   }
 
   success({ title, msg }: { title: string; msg: string }): void {
-    console.log(`ToastService.success called - silent=${this.silent}`, { title, msg });
     if (this.silent) {
-      console.log('Toast suppressed because silent=true');
       return;
     }
     toastSuccess({ title, msg });
@@ -137,12 +124,12 @@ export function toastError({ title, msg, traceback, toastOptions }: ToastErrorPr
       </div>
       <div className="flex-none flex items-center">
         {traceback ? (
-          <button
-            className="text-textProminentInverse font-medium"
+          <Button
+            className="text-textProminentInverse font-medium rt-variant-outline dark:bg-gray-300 bg-slate"
             onClick={() => navigator.clipboard.writeText(traceback)}
           >
             Copy error
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>,

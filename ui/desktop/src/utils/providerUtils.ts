@@ -4,6 +4,14 @@ import { GOOSE_PROVIDER, GOOSE_MODEL } from '../env_vars';
 import { Model } from '../components/settings/models/ModelContext';
 import { gooseModels } from '../components/settings/models/GooseModels';
 import { initializeAgent } from '../agent';
+import { settingsV2Enabled } from '../flags';
+import {
+  initializeBundledExtensions,
+  syncBundledExtensions,
+  addToAgentOnStartup,
+} from '../components/settings_v2/extensions';
+import { extractExtensionConfig } from '../components/settings_v2/extensions/utils';
+import type { ExtensionConfig, FixedExtensionEntry } from '../components/ConfigContext';
 
 export function getStoredProvider(config: any): string | null {
   return config.GOOSE_PROVIDER || localStorage.getItem(GOOSE_PROVIDER);
@@ -65,13 +73,20 @@ You can also validate your output after you have generated it to ensure it meets
 There may be (but not always) some tools mentioned in the instructions which you can check are available to this instance of goose (and try to help the user if they are not or find alternatives).
 `;
 
-export const initializeSystem = async (provider: string, model: string) => {
+export const initializeSystem = async (
+  provider: string,
+  model: string,
+  options?: {
+    getExtensions?: (b: boolean) => Promise<FixedExtensionEntry[]>;
+    addExtension?: (name: string, config: ExtensionConfig, enabled: boolean) => Promise<void>;
+  }
+) => {
   try {
     console.log('initializing agent with provider', provider, 'model', model);
     await initializeAgent({ provider, model });
 
     // This will go away after the release of settings v2 as this is now handled in config.yaml
-    if (!process.env.ALPHA) {
+    if (!settingsV2Enabled) {
       // Sync the model state with React
       const syncedModel = syncModelWithAgent(provider, model);
       console.log('Model synced with React state:', syncedModel);
@@ -104,11 +119,30 @@ export const initializeSystem = async (provider: string, model: string) => {
       }
     }
 
-    // This will go away after the release of settings v2 as we now handle this via
-    //
-    // initializeBuiltInExtensions
-    // syncBuiltInExtensions
-    if (!process.env.ALPHA) {
+    if (settingsV2Enabled) {
+      if (!options?.getExtensions || !options?.addExtension) {
+        console.warn('Extension helpers not provided in alpha mode');
+        return;
+      }
+
+      // Initialize or sync built-in extensions into config.yaml
+      let refreshedExtensions = await options.getExtensions(false);
+
+      if (refreshedExtensions.length === 0) {
+        await initializeBundledExtensions(options.addExtension);
+        refreshedExtensions = await options.getExtensions(false);
+      } else {
+        await syncBundledExtensions(refreshedExtensions, options.addExtension);
+      }
+
+      // Add enabled extensions to agent
+      for (const extensionEntry of refreshedExtensions) {
+        if (extensionEntry.enabled) {
+          const extensionConfig = extractExtensionConfig(extensionEntry);
+          await addToAgentOnStartup({ addToConfig: options.addExtension, extensionConfig });
+        }
+      }
+    } else {
       loadAndAddStoredExtensions().catch((error) => {
         console.error('Failed to load and add stored extension configs:', error);
       });

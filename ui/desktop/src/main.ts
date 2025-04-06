@@ -130,9 +130,18 @@ const getSharingUrl = () => {
   return process.env.GOOSE_BASE_URL_SHARE;
 };
 
+const getVersion = () => {
+  // checks app env for sharing url
+  loadShellEnv(app.isPackaged); // will try to take it from the zshrc file
+  // to in the env at bundle time
+  return process.env.GOOSE_VERSION;
+};
+
 let [provider, model] = getGooseProvider();
 
 let sharingUrl = getSharingUrl();
+
+let gooseVersion = getVersion();
 
 let appConfig = {
   GOOSE_PROVIDER: provider,
@@ -181,6 +190,7 @@ const createChat = async (
           GOOSE_WORKING_DIR: working_dir,
           REQUEST_DIR: dir,
           GOOSE_BASE_URL_SHARE: sharingUrl,
+          GOOSE_VERSION: gooseVersion,
           botConfig: botConfig,
         }),
       ],
@@ -426,6 +436,41 @@ ipcMain.handle('get-binary-path', (event, binaryName) => {
   return getBinaryPath(app, binaryName);
 });
 
+ipcMain.handle('read-file', (event, filePath) => {
+  return new Promise((resolve) => {
+    exec(`cat ${filePath}`, (error, stdout, stderr) => {
+      if (error) {
+        // File not found
+        resolve({ file: '', filePath, error: null, found: false });
+      }
+      if (stderr) {
+        console.error('Error output:', stderr);
+        resolve({ file: '', filePath, error, found: false });
+      }
+      resolve({ file: stdout, filePath, error: null, found: true });
+    });
+  });
+});
+
+ipcMain.handle('write-file', (event, filePath, content) => {
+  return new Promise((resolve) => {
+    const command = `cat << 'EOT' > ${filePath}
+${content}
+EOT`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Error writing to file:', error);
+        resolve(false);
+      }
+      if (stderr) {
+        console.error('Error output:', stderr);
+        resolve(false);
+      }
+      resolve(true);
+    });
+  });
+});
+
 app.whenReady().then(async () => {
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     details.requestHeaders['Origin'] = 'http://localhost:5173';
@@ -646,41 +691,6 @@ app.whenReady().then(async () => {
       // On Linux, use xdg-open with chrome
       spawn('xdg-open', [url]);
     }
-  });
-
-  ipcMain.handle('read-file', (event, filePath) => {
-    return new Promise((resolve) => {
-      exec(`cat ${filePath}`, (error, stdout, stderr) => {
-        if (error) {
-          // File not found
-          resolve({ file: '', filePath, error: null, found: false });
-        }
-        if (stderr) {
-          console.error('Error output:', stderr);
-          resolve({ file: '', filePath, error, found: false });
-        }
-        resolve({ file: stdout, filePath, error: null, found: true });
-      });
-    });
-  });
-
-  ipcMain.handle('write-file', (event, filePath, content) => {
-    return new Promise((resolve) => {
-      const command = `cat << 'EOT' > ${filePath}
-${content}
-EOT`;
-      exec(command, (error, stdout, stderr) => {
-        if (error) {
-          console.error('Error writing to file:', error);
-          resolve(false);
-        }
-        if (stderr) {
-          console.error('Error output:', stderr);
-          resolve(false);
-        }
-        resolve(true);
-      });
-    });
   });
 });
 

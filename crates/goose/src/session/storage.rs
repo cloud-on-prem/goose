@@ -27,6 +27,10 @@ pub struct SessionMetadata {
     pub message_count: usize,
     /// The total number of tokens used in the session. Retrieved from the provider's last usage.
     pub total_tokens: Option<i32>,
+    /// The number of input tokens used in the session. Retrieved from the provider's last usage.
+    pub input_tokens: Option<i32>,
+    /// The number of output tokens used in the session. Retrieved from the provider's last usage.
+    pub output_tokens: Option<i32>,
 }
 
 // Custom deserializer to handle old sessions without working_dir
@@ -40,6 +44,8 @@ impl<'de> Deserialize<'de> for SessionMetadata {
             description: String,
             message_count: usize,
             total_tokens: Option<i32>,
+            input_tokens: Option<i32>,
+            output_tokens: Option<i32>,
             working_dir: Option<PathBuf>,
         }
 
@@ -49,6 +55,8 @@ impl<'de> Deserialize<'de> for SessionMetadata {
             description: helper.description,
             message_count: helper.message_count,
             total_tokens: helper.total_tokens,
+            input_tokens: helper.input_tokens,
+            output_tokens: helper.output_tokens,
             working_dir: helper.working_dir.unwrap_or_else(get_home_dir),
         })
     }
@@ -61,6 +69,8 @@ impl SessionMetadata {
             description: String::new(),
             message_count: 0,
             total_tokens: None,
+            input_tokens: None,
+            output_tokens: None,
         }
     }
 }
@@ -410,5 +420,130 @@ mod tests {
         assert_eq!(parts[0].len(), 8);
         // Time part should be 6 digits
         assert_eq!(parts[1].len(), 6);
+    }
+
+    #[tokio::test]
+    async fn test_special_characters_and_long_text() -> Result<()> {
+        let dir = tempdir()?;
+        let file_path = dir.path().join("special.jsonl");
+
+        // Insert some problematic JSON-like content between long text
+        let long_text = format!(
+            "Start_of_message\n{}{}SOME_MIDDLE_TEXT{}End_of_message",
+            "A".repeat(100_000),
+            "\"}]\n",
+            "A".repeat(100_000)
+        );
+
+        let special_chars = vec![
+            // Long text
+            long_text.as_str(),
+            // Newlines in different positions
+            "Line 1\nLine 2",
+            "Line 1\r\nLine 2",
+            "\nStart with newline",
+            "End with newline\n",
+            "\n\nMultiple\n\nNewlines\n\n",
+            // JSON special characters
+            "Quote\"in middle",
+            "\"Quote at start",
+            "Quote at end\"",
+            "Multiple\"\"Quotes",
+            "{\"json\": \"looking text\"}",
+            // Unicode and special characters
+            "Unicode: 🦆🤖👾",
+            "Special: \\n \\r \\t",
+            "Mixed: \n\"🦆\"\r\n\\n",
+            // Control characters
+            "Tab\there",
+            "Bell\u{0007}char",
+            "Null\u{0000}char",
+            // Long text with mixed content
+            "A very long message with multiple lines\nand \"quotes\"\nand emojis 🦆\nand \\escaped chars",
+            // Potentially problematic JSON content
+            "}{[]\",\\",
+            "]}}\"\\n\\\"{[",
+            "Edge case: } ] some text",
+            "{\"foo\": \"} ]\"}",
+            "}]",   
+        ];
+
+        let mut messages = Vec::new();
+        for text in special_chars {
+            messages.push(Message::user().with_text(text));
+            messages.push(Message::assistant().with_text(text));
+        }
+
+        // Write messages with special characters
+        persist_messages(&file_path, &messages, None).await?;
+
+        // Read them back
+        let read_messages = read_messages(&file_path)?;
+
+        // Compare all messages
+        assert_eq!(messages.len(), read_messages.len());
+        for (i, (orig, read)) in messages.iter().zip(read_messages.iter()).enumerate() {
+            assert_eq!(orig.role, read.role, "Role mismatch at message {}", i);
+            assert_eq!(
+                orig.content.len(),
+                read.content.len(),
+                "Content length mismatch at message {}",
+                i
+            );
+
+            if let (Some(MessageContent::Text(orig_text)), Some(MessageContent::Text(read_text))) =
+                (orig.content.first(), read.content.first())
+            {
+                assert_eq!(
+                    orig_text.text, read_text.text,
+                    "Text mismatch at message {}\nExpected: {}\nGot: {}",
+                    i, orig_text.text, read_text.text
+                );
+            } else {
+                panic!("Messages don't match expected structure at index {}", i);
+            }
+        }
+
+        // Verify file format
+        let contents = fs::read_to_string(&file_path)?;
+        let lines: Vec<&str> = contents.lines().collect();
+
+        // First line should be metadata
+        assert!(
+            lines[0].contains("\"description\""),
+            "First line should be metadata"
+        );
+
+        // Each subsequent line should be valid JSON
+        for (i, line) in lines.iter().enumerate().skip(1) {
+            assert!(
+                serde_json::from_str::<Message>(line).is_ok(),
+                "Invalid JSON at line {}: {}",
+                i + 1,
+                line
+            );
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_metadata_special_chars() -> Result<()> {
+        let dir = tempdir()?;
+        let file_path = dir.path().join("metadata.jsonl");
+
+        let mut metadata = SessionMetadata::default();
+        metadata.description = "Description with\nnewline and \"quotes\" and 🦆".to_string();
+
+        let messages = vec![Message::user().with_text("test")];
+
+        // Write with special metadata
+        save_messages_with_metadata(&file_path, &metadata, &messages)?;
+
+        // Read back metadata
+        let read_metadata = read_metadata(&file_path)?;
+        assert_eq!(metadata.description, read_metadata.description);
+
+        Ok(())
     }
 }

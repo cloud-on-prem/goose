@@ -4,6 +4,7 @@ pub mod storage;
 use anyhow::{Context, Error};
 use base64::Engine;
 use indoc::indoc;
+use mcp_core::tool::ToolAnnotations;
 use oauth_pkce::PkceOAuth2Client;
 use regex::Regex;
 use serde_json::{json, Value};
@@ -209,6 +210,13 @@ impl GoogleDriveRouter {
                 }
               },
             }),
+            Some(ToolAnnotations {
+                    title: Some("Search GDrive".to_string()),
+                    read_only_hint: true,
+                    destructive_hint: false,
+                    idempotent_hint: false,
+                    open_world_hint: false,
+                }),
         );
 
         let read_tool = Tool::new(
@@ -231,6 +239,13 @@ impl GoogleDriveRouter {
                   }
               },
               "required": ["uri"],
+            }),
+            Some(ToolAnnotations {
+                title: Some("Read GDrive".to_string()),
+                read_only_hint: true,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
             }),
         );
 
@@ -269,6 +284,13 @@ impl GoogleDriveRouter {
                   }
               },
               "required": ["name", "mimeType"],
+            }),
+            Some(ToolAnnotations {
+                title: Some("Upload file to GDrive".to_string()),
+                read_only_hint: false,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
             }),
         );
 
@@ -313,6 +335,13 @@ impl GoogleDriveRouter {
               },
               "required": ["name", "fileType"],
             }),
+            Some(ToolAnnotations {
+                title: Some("Create new file in GDrive".to_string()),
+                read_only_hint: false,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
         );
 
         let move_file_tool = Tool::new(
@@ -339,12 +368,19 @@ impl GoogleDriveRouter {
               },
               "required": ["fileId", "currentFolderId", "newFolderId"],
             }),
+            Some(ToolAnnotations {
+                title: Some("Move file".to_string()),
+                read_only_hint: false,
+                destructive_hint: true,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
         );
 
-        let update_tool = Tool::new(
-            "update".to_string(),
+        let update_file_tool = Tool::new(
+            "update_file".to_string(),
             indoc! {r#"
-                Update a Google Drive file with new content.
+                Update a normal non-Google file (not Document, Spreadsheet, and Slides) in Google Drive with new content.
             "#}
             .to_string(),
             json!({
@@ -373,10 +409,17 @@ impl GoogleDriveRouter {
               },
               "required": ["fileId", "mimeType"],
             }),
+            Some(ToolAnnotations {
+                title: Some("Update a non-Google file".to_string()),
+                read_only_hint: false,
+                destructive_hint: true,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
         );
 
-        let update_file_tool = Tool::new(
-            "update_file".to_string(),
+        let update_google_file_tool = Tool::new(
+            "update_google_file".to_string(),
             indoc! {r#"
                 Update a Google file (Document, Spreadsheet, or Slides) in Google Drive.
             "#}
@@ -407,6 +450,13 @@ impl GoogleDriveRouter {
                   }
               },
               "required": ["fileId", "fileType"],
+            }),
+            Some(ToolAnnotations {
+                title: Some("Update a Google file".to_string()),
+                read_only_hint: false,
+                destructive_hint: true,
+                idempotent_hint: false,
+                open_world_hint: false,
             }),
         );
 
@@ -468,6 +518,7 @@ impl GoogleDriveRouter {
               },
               "required": ["spreadsheetId", "operation"],
             }),
+            None,
         );
 
         let get_comments_tool = Tool::new(
@@ -485,6 +536,13 @@ impl GoogleDriveRouter {
                 }
               },
               "required": ["fileId"],
+            }),
+            Some(ToolAnnotations {
+                title: Some("List file comments".to_string()),
+                read_only_hint: true,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
             }),
         );
 
@@ -507,6 +565,13 @@ impl GoogleDriveRouter {
                 }
               },
               "required": ["fileId", "comment"],
+            }),
+            Some(ToolAnnotations {
+                title: Some("Create file comment".to_string()),
+                read_only_hint: false,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
             }),
         );
 
@@ -538,6 +603,13 @@ impl GoogleDriveRouter {
               },
               "required": ["fileId", "commentId", "content"],
             }),
+            Some(ToolAnnotations {
+                title: Some("Reply to a comment".to_string()),
+                read_only_hint: false,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
         );
 
         let list_drives_tool = Tool::new(
@@ -555,6 +627,13 @@ impl GoogleDriveRouter {
                 }
               },
             }),
+            Some(ToolAnnotations {
+                title: Some("List shared google drives".to_string()),
+                read_only_hint: true,
+                destructive_hint: false,
+                idempotent_hint: false,
+                open_world_hint: false,
+            }),
         );
 
         let instructions = indoc::formatdoc! {r#"
@@ -566,7 +645,8 @@ impl GoogleDriveRouter {
             2. read - Read file contents directly using a uri in the `gdrive:///uri` format
             3. sheets_tool - Work with Google Sheets data using various operations
             4. create_file - Create Google Workspace files (Docs, Sheets, or Slides)
-            5. update_file - Update existing Google Workspace files
+            5. update_google_file - Update existing Google Workspace files (Docs, Sheets, or Slides)
+            6. update_file - Update existing normal non-Google Workspace files
 
             ## Available Tools
 
@@ -662,8 +742,8 @@ impl GoogleDriveRouter {
                 upload_tool,
                 create_file_tool,
                 move_file_tool,
-                update_tool,
                 update_file_tool,
+                update_google_file_tool,
                 sheets_tool,
                 get_comments_tool,
                 create_comment_tool,
@@ -1776,7 +1856,7 @@ impl GoogleDriveRouter {
         }
     }
 
-    async fn update(&self, params: Value) -> Result<Vec<Content>, ToolError> {
+    async fn update_file(&self, params: Value) -> Result<Vec<Content>, ToolError> {
         let file_id =
             params
                 .get("fileId")
@@ -1827,7 +1907,7 @@ impl GoogleDriveRouter {
         .await
     }
 
-    async fn update_file(&self, params: Value) -> Result<Vec<Content>, ToolError> {
+    async fn update_google_file(&self, params: Value) -> Result<Vec<Content>, ToolError> {
         // Extract common parameters
         let file_id =
             params
@@ -2178,8 +2258,8 @@ impl Router for GoogleDriveRouter {
                 "upload" => this.upload(arguments).await,
                 "create_file" => this.create_file(arguments).await,
                 "move_file" => this.move_file(arguments).await,
-                "update" => this.update(arguments).await,
                 "update_file" => this.update_file(arguments).await,
+                "update_google_file" => this.update_google_file(arguments).await,
                 "sheets_tool" => this.sheets_tool(arguments).await,
                 "create_comment" => this.create_comment(arguments).await,
                 "get_comments" => this.get_comments(arguments).await,
