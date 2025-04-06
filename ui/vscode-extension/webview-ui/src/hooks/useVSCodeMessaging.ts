@@ -143,6 +143,11 @@ export const useVSCodeMessaging = (): UseVSCodeMessagingResult => {
         setIsLoading(true);
         setCurrentMessageId(messageId);
         setIntermediateText(null); // Clear any previous intermediate text
+
+        // Clear code references after sending
+        if (refs.length > 0) {
+            setCodeReferences([]);
+        }
     }, [vscode, safeguardedSetMessages, serverStatus]);
 
     // Stop AI generation
