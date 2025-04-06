@@ -1,5 +1,4 @@
 import React from 'react';
-import { SessionIndicator } from './SessionIndicator';
 import { SessionMetadata } from './SessionList';
 
 interface HeaderProps {
@@ -7,38 +6,85 @@ interface HeaderProps {
     currentSession: SessionMetadata | null;
     onToggleSessionDrawer: () => void;
     isGenerating: boolean;
+    onNewSession: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
     status,
-    currentSession,
     onToggleSessionDrawer,
-    isGenerating
+    isGenerating,
+    onNewSession
 }) => {
-    // Display GENERATING status when isGenerating is true, otherwise show the actual status
-    let displayStatus = isGenerating ? 'GENERATING' : status;
+    // Helper to get status display text (incorporating isGenerating)
+    const getDisplayStatus = (status: string, isGenerating: boolean): string => {
+        if (isGenerating) return 'GENERATING';
+        if (status === 'running') return 'SERVER CONNECTED';
+        // Add other status mappings as needed (e.g., error details)
+        return status.toUpperCase();
+    };
 
-    // Change "running" to "SERVER CONNECTED" for better clarity
-    if (displayStatus === 'running') {
-        displayStatus = 'SERVER CONNECTED';
-    }
+    // Helper to get status color theme variable
+    const getStatusColorVar = (status: string, isGenerating: boolean): string => {
+        console.log('Status:', status, 'isGenerating:', isGenerating); // Debug log
+
+        if (isGenerating) return 'var(--vscode-gitDecoration-modifiedResourceForeground)'; // Blue for Generating
+
+        // Convert status to lowercase for consistent comparison
+        const statusLower = status.toLowerCase();
+        console.log('Status lowercase:', statusLower); // Debug log
+
+        switch (statusLower) {
+            case 'running':
+                return 'var(--vscode-testing-iconPassed)'; // Green for running
+            case 'error':
+            case 'stopped':
+                return 'var(--vscode-errorForeground)'; // Red
+            case 'connecting':
+            case 'initializing':
+                return 'var(--vscode-debugIcon-pauseForeground)'; // Yellow/Orange
+            default:
+                return 'var(--vscode-disabledForeground)'; // Gray
+        }
+    };
+
+    const displayStatus = getDisplayStatus(status, isGenerating);
+    const statusColorVar = getStatusColorVar(status, isGenerating);
 
     return (
         <div className="vscode-chat-header">
-            <div className="vscode-chat-header-content">
-                <div className="vscode-chat-title">Goose</div>
+            <div className="header-actions">
+                {/* New Session Button */}
+                <button
+                    className="icon-button"
+                    title="New Session"
+                    onClick={onNewSession}
+                    disabled={isGenerating}
+                >
+                    <i className="codicon codicon-add"></i>
+                </button>
 
-                <SessionIndicator
-                    currentSession={currentSession}
-                    onToggleSessionDrawer={onToggleSessionDrawer}
-                    isGenerating={isGenerating}
-                />
+                {/* Session History Button */}
+                <button
+                    className="icon-button"
+                    title="Session History"
+                    onClick={onToggleSessionDrawer}
+                    disabled={isGenerating}
+                >
+                    <i className="codicon codicon-history"></i>
+                </button>
 
-                <div className="vscode-status-container">
-                    <div className={`vscode-status-badge ${status.toLowerCase()}`}>
-                        {displayStatus}
-                    </div>
-                </div>
+                {/* Status Indicator Dot */}
+                <div
+                    className="status-light"
+                    title={displayStatus} // Tooltip shows detailed status
+                    style={{
+                        backgroundColor: statusColorVar,
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        border: '1px solid var(--vscode-panel-border)'
+                    }}
+                ></div>
             </div>
         </div>
     );

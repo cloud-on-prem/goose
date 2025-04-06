@@ -108,6 +108,7 @@ const App: React.FC = () => {
                 currentSession={currentSession}
                 onToggleSessionDrawer={toggleSessionDrawer}
                 isGenerating={isLoading}
+                onNewSession={handleCreateSession}
             />
 
             {showSessionDrawer && (
