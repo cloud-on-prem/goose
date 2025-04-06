@@ -39,7 +39,8 @@ enum MessageType {
 	GET_SESSIONS = 'getSessions',
 	SERVER_EXIT = 'serverExit',
 	GET_SERVER_STATUS = 'getServerStatus',
-	RESTART_SERVER = 'restartServer'
+	RESTART_SERVER = 'restartServer',
+	FOCUS_CHAT_INPUT = 'focusChatInput'
 }
 
 // Interface for messages sent between extension and webview
@@ -678,6 +679,13 @@ export function activate(context: vscode.ExtensionContext) {
 	const askAboutSelectionDisposable = vscode.commands.registerCommand('goose.askAboutSelection', () => {
 		provider.addCodeReference();
 		vscode.commands.executeCommand('goose.chatView.focus');
+
+		// Send a message to the webview to focus the chat input
+		if (provider) {
+			provider.sendMessageToWebview({
+				command: MessageType.FOCUS_CHAT_INPUT
+			});
+		}
 	});
 
 	// Register session management commands

@@ -23,7 +23,8 @@ export enum MessageType {
     DELETE_SESSION = 'deleteSession',
     GET_SESSIONS = 'getSessions',
     RESTART_SERVER = 'restartServer',
-    GET_SERVER_STATUS = 'getServerStatus'
+    GET_SERVER_STATUS = 'getServerStatus',
+    FOCUS_CHAT_INPUT = 'focusChatInput'
 }
 
 // Type for code references

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import './vscodeStyles.css'; // Import VS Code theme variables
 // Import new components
 import { Header } from './components/Header';
@@ -18,6 +18,7 @@ const App: React.FC = () => {
     // State for UI elements
     const [inputMessage, setInputMessage] = useState<string>('');
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+    const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
     // Use the VS Code messaging hook
     const {
@@ -100,6 +101,32 @@ const App: React.FC = () => {
         });
         // The actual state update will happen when the extension sends back a confirmation
     }, []);
+
+    // Handler for focusing the chat input
+    const handleFocusInput = useCallback(() => {
+        setTimeout(() => {
+            const textareaElement = document.querySelector('.input-row textarea') as HTMLTextAreaElement;
+            if (textareaElement) {
+                textareaElement.focus();
+            }
+        }, 100);
+    }, []);
+
+    // Listen for messages from the extension to focus the input
+    useEffect(() => {
+        const vscode = getVSCodeAPI();
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message && message.command === MessageType.FOCUS_CHAT_INPUT) {
+                handleFocusInput();
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, [handleFocusInput]);
 
     return (
         <div className="container">

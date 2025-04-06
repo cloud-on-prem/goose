@@ -10,10 +10,11 @@ This extension brings Goose AI functionality to Visual Studio Code.
 * Code referencing with visual chips in the chat UI
 * Quick actions for common coding tasks
 * Code action suggestions for diagnostics and selection
+* Keyboard shortcuts for improved productivity (cmd/ctrl+shift+g by default; configurable)
 
 ## Requirements
 
-> ⚠️ **VSCode 1.98.0 or higher is required** for this extension to function properly.
+> ⚠️ **VSCode 1.95.0 or higher is required** for this extension to function properly.
 
 > ⚠️ **Goose Desktop must be installed** before using this extension. This extension spawns `goosed` and uses the API which is already bundled with the Desktop App.
 
@@ -45,15 +46,23 @@ The Goose chat interface appears in the sidebar activity bar. Click the Goose ic
 You can reference code from your editor in your conversations with Goose:
 
 1. Select code in your editor
-2. Right-click and choose "Ask Goose about this code" or any of the quick action commands
+2. Right-click and choose "Ask Goose about this code" or use the keyboard shortcut <kbd>Ctrl+Shift+G</kbd> (<kbd>Cmd+Shift+G</kbd> on macOS)
 3. The code will be added as a reference chip above the input box
 4. Type your question and send
+
+When you use the keyboard shortcut, the chat input will be automatically focused, allowing you to immediately start typing your question.
 
 ### Quick Actions
 
 The extension currently provides the following quick action command that can be accessed by right-clicking on selected code:
 
 * **Ask Goose about this code** - General question about the selected code
+
+### Keyboard Shortcuts
+
+| Command | Shortcut (Windows/Linux) | Shortcut (macOS) |
+|---------|--------------------------|------------------|
+| Ask Goose about selected code | <kbd>Ctrl+Shift+G</kbd> | <kbd>Cmd+Shift+G</kbd> |
 
 ## Extension Settings
 

@@ -67,7 +67,15 @@
           "group": "goose"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "goose.askAboutSelection",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
+        "when": "editorHasSelection"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
